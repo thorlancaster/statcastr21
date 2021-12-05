@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>Application</title>
+	<script>
+		// Minified from Loader.js
+		class Loader{constructor(e){var t=this;t.styles=[],t.scripts=[],t.nScripts=0,t.callback=null,t.msg=e,t.loadables=[]}setCallback(e){this.callback=e}loadStyle(e){this.styles.includes(e)||this.styles.push(e)}loadScript(e){this.scripts.includes(e)||this.scripts.push(e)}loadStyles(e){for(var t in e)this.loadStyle(e[t])}loadScripts(e){for(var t in e)this.loadScript(e[t])}dce(e,t){var l=document.createElement(e);return t&&(l.id=t),l}ld(e){var t=this;e.dataset.loaded="1";var l=0;for(let e in t.loadables)t.loadables[e].dataset.loaded&&l++;t.loadBar.style.width=5+l/t.loadables.length*75+"%",l===t.loadables.length&&(t.nScripts=t.scripts.length,t.ldd())}ldd(){var e=this;for(let t in e.styles){let l=e.dce("link");l.rel="stylesheet",l.href=e.styles[t],document.head.appendChild(l)}if(e.styles.length=0,e.scripts.length){let t=e.dce("script");t.src=e.scripts.shift(),t.addEventListener("load",e.ldd.bind(e)),e.loadBar.style.width=100-e.scripts.length/e.nScripts*20+"%",document.head.appendChild(t)}else setTimeout(function(){e.el.style.opacity=0},200),setTimeout(e.ldDone.bind(e),400)}ldDone(){console.log("Loading complete, starting application...");var e=this;e.el.parentElement.removeChild(e.el),e.callback&&e.callback()}load(){var e=this,t=e.dce("style");t.innerHTML="@keyframes _ldrMvBg{0%{background-position: 0%;}100%{background-position: 50%;}}";var l=e.dce("div");l.appendChild(t),l.style.fontFamily="roboto, sans-serif",l.style.color="#FFF",l.style.background="#334",l.style.display="flex",l.style.height="100vh",l.style.justifyContent="center",l.style.alignItems="center",l.style.textAlign="center",l.style.transition="opacity 0.2s",l.style.zIndex="9999999",document.body.appendChild(l);var s=e.dce("div");s.style.display="flex",s.style.flexDirection="column",s.style.justifyContent="space-around",s.style.height="8em",s.style.width="14em",s.style.maxWidth="100%",l.appendChild(s);var d=e.dce("img");d.style.margin="auto",d.style.marginTop="0",d.style.width="5em",d.src=e.msg,s.appendChild(d);var i=e.dce("div");i.style.background="#111",i.style.border="1px solid #000";var a=e.dce("div");a.style.width="5%",a.style.transition="width 0.2s",a.style.height="0.5em",a.style.background="linear-gradient(90deg, #f63, #f13, #f63, #F13, #000, #000)",a.style.backgroundSize="500%",a.style.animation="_ldrMvBg 1s linear infinite",s.appendChild(i),i.appendChild(a),e.loadBar=a,e.el=l;for(let t in e.styles){let l=e.dce("link");l.rel="preload",l.as="style",l.href=e.styles[t],l.addEventListener("load",function(){e.ld(this)}),e.loadables.push(l),document.head.appendChild(l)}for(let t in e.scripts){let l=e.dce("link");l.href=e.scripts[t],l.rel="preload",l.as="script",l.addEventListener("load",function(){e.ld(this)}),e.loadables.push(l),document.head.appendChild(l)}0===e.scripts.length&&0===e.styles.length&&(e.loadBar.style.width="100%",e.ldd())}}
+	</script>
+
+	<script>
+		function ldrBeginLoad() {
+			var l = new Loader("../ico/favicon-192.png");
+			l.setCallback(function(){
+				console.log("TODO invoke main class here");
+			})
+			l.load();
+		}
+	</script>
+</head>
+<body style="margin: 0" onload="ldrBeginLoad()">
+</body>
+</html>

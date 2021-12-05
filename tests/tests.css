@@ -1,0 +1,33 @@
+.utItem{
+    font-size: 1.2em;
+    display: flex;
+    border: 1px solid #000;
+    margin: 0.5em;
+    font-family: "roboto", "sans-serif";
+    justify-content: space-between;
+}
+
+.utItem button{
+    font-size: 1.2em;
+    background: linear-gradient(90deg, #F53, #F23);
+    cursor: pointer;
+    line-height: 1.1em;
+}
+
+.utResult{
+    min-width: 8em;
+    background: #556;
+    color: #FFF;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+.utResult-pass{
+    background: #271;
+}
+.utResult-fail{
+    background: #821;
+}
+.utResult-warn{
+    background: #551;
+}

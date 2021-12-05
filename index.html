@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+	<meta charset="utf-8">
+	<meta name="theme-color" content="#334"/>
+	<link rel="shortcut icon" href="favicon.ico"/>
+	<title>Statcastr</title>
+	<style type="text/css">
+		body {
+			background: #334;
+			display: flex;
+			height: 100vh;
+			margin: 0;
+			justify-content: center;
+			align-items: center;
+			text-align: center;
+		}
+		#window{
+			display: flex;
+			flex-direction: column;
+			justify-content: space-around;
+			height: 12em;
+		}
+		#version{
+			font-family: roboto, sans-serif;
+			color: #FFF;
+		}
+
+		button {
+			font-size: 1.5em;
+			background: linear-gradient(90deg, #F53, #F23);
+			cursor: pointer;
+			width: 100%
+		}
+	</style>
+</head>
+<body>
+<div id="window">
+	<a href="admin"><button>Admin Entrance</button></a>
+	<a href="viewer"><button>Fan Entrance</button></a>
+	<a href="tests"><button>Unit Tests</button></a>
+	<p id="version">
+		Statcastr v<!--#define VERSION-->3.0.1<!---->
+	</p>
+</div>
+</body>
+</html>

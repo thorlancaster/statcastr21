@@ -1,0 +1,44 @@
+{
+"short_name": "SC Admin",
+"name": "Statcastr Admin",
+"description": "Live scoring broadcast app for Statcastr",
+"icons": [
+    {
+        "src": "ico/admin-192.png",
+        "sizes": "192x192",
+        "type": "image/png"
+    },
+    {
+        "src": "ico/admin-512.png",
+        "sizes": "512x512",
+        "type": "image/png"
+    }
+],
+"start_url": "/?standalone=true",
+"background_color": "#111",
+"display": "standalone",
+"theme_color": "#334",
+"shortcuts": [
+  {
+    "name": "Team Manager",
+    "short_name": "Teams",
+    "description": "Manage teams and rosters",
+    "url": "/teamManager?standalone=true",
+    "icons": [{ "src": "/ico/manager-192.png", "sizes": "192x192" }]
+  },
+  {
+    "name": "Event Manager",
+    "short_name": "Events",
+    "description": "Create, Edit, and delete events",
+    "url": "/eventManager?standalone=true",
+    "icons": [{ "src": "/ico/events-192.png", "sizes": "192x192" }]
+  },
+  {
+    "name": "Accounts Manager",
+    "short_name": "Accounts",
+    "description": "Create, Edit, and delete accounts and connection methods",
+    "url": "/accountsManager?standalone=true",
+    "icons": [{ "src": "/ico/accounts-192.png", "sizes": "192x192" }]
+  }
+]
+}

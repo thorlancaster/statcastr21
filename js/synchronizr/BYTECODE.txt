@@ -1,0 +1,12 @@
+Synchronizr / SynDiff
+	255: Short Run
+	254: Negative Short Run
+	253: Long Run / CLEAR BOWL
+	252: Singular Short Run (1 entry)
+	251: Set ArrNum
+	250: BAIL
+	249: Direct Append
+	Else: Literal
+
+SynchronizrManager:
+
