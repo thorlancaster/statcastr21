@@ -17,8 +17,11 @@
 				"../js/Debuggr.js",
 				"../js/synchronizr/Synchronizr.js",
 				"../js/synchronizr/SynDiff.js",
+				"../js/synchronizr/SynchronizrManager.js",
+				"../js/reliablechannel/ReliableChannel.js",
 				"UnitTest.js",
 				"TestSynchronizrFull.js",
+				"TestSynchronizrLSD.js",
 				"TestSynchronizrPerf.js",
 				"TestSynchronizrDiff.js"]);
 			l.loadStyles([
@@ -35,7 +38,7 @@
 			var t3 = new TestSynchronizrFullSafe(el, "Synchronizr SAFE");
 			var t4 = new TestSynchronizrPerf(el, "Synchronizr");
 			var t1_3 = new TestCombined(el, [t1, t2, t3], "Synchronizr");
-
+			var t5 = new TestSynchronizrLSD(el, "Synchronizr LSD");
 		}
 	</script>
 </head>

@@ -9,4 +9,63 @@ Synchronizr / SynDiff
 	Else: Literal
 
 SynchronizrManager:
+	// Each message begins with one of the below
+	255: Standard (RX|TX)
+		See Synchronizr above
+		// Payload delivered straight to Synchronizr
+	254: Managerial
+		// Payload interpreted as below
+	83: Fatal Error
+		// Next byte is exception code
+		// Optional string is below
+	82: Non-fatal Error
+		// Next byte is exception code
+    	// Optional string is below
 
+
+
+	254: Query event (RX|TX)
+		Send <eventId:String>
+		Returns <eventId:String><Len:2byte><EventProps>
+	253: Query All events (RX|TX)
+		Send <List:OpCode in EventProps> followed by 0x00
+		Returns List of EventProps, seperated by
+		<Length:2Byte> and prepended by <numEvents:2Byte>
+	252: RESERVED (SQL) Syn Query Language
+
+	250: Set Credentials <Uname:String><PW:String>
+	249: CreateJoinEvent <EventProps:String>
+		// Used to Create or Join as ADMIN
+		EventId REQUIRED <String>
+		EventSize PROHIBITED
+		MasksRequired OPTIONAL <Byte>
+			Must be <= User's number of Masks
+			User must have CreateEvent permission
+	248: SpectateEvent <EventID:String>
+	240: VerifyHash<HashLength:Byte><Hash:Byte[]>
+	239: VerifyHashResponse <OR>
+		<0x00> // Success, hash matches
+		VerifyHash<HashLength:Byte><Hash:Byte[]> // Failure
+
+	234: Query Event Response
+	233: Query All Events Response
+
+	230: Admin joined event
+	229: Admin disconnected [Intentionally]
+	228: Admin lost connection [Network Bad]
+
+
+	::EventProps
+	255: EventId (Unless you asked with it)
+	254: Event size bytes <uint24>
+	253: Event name <Len:2byte><data[arrNum:0, idx:0]>
+	252: Event info<Len:2byte><data[arrNum:0, idx:1]>
+	248: AdminConnected <ProtocolId:byte> <uname:String>
+		ProtocolId: 204 Websocket, 237 LoRa, ...
+		// This is determined by the server
+	247: MasksRequired <Byte:NumMasks>
+		// User privilege level required to modify event
+	246: ForceJoin <No Args>
+		// Disconnect the old admin
+
+	::SynQueryLanguage

@@ -1,3 +1,73 @@
+class SynchronizrUtils {
+	static load(id, data) {
+		data = [];
+		for (var x = 0; x < 256; x++)
+			data[x] = [];
+		console.warn("TODO load from LocalStorage");
+	}
+
+	static save(id, data) {
+		console.warn("TODO load from LocalStorage");
+	}
+}
+
+
+class SynchronizrOpsClass{
+	constructor() {
+		var t = this;
+		// Constants - copied to SynchronizrManager.js
+		t.MODE_WRITE = 0; // Overwrite
+		t.MODE_INSERT = 1; // Insert _data, move other
+		t.MODE_DELETE = 2; // Delete _data, move other
+		t.MODE_APPEND = 3; // Add _data to end
+	}
+}
+
+/**
+ * Class that holds Synchronizr functions common to both transmitter and receiver
+ */
+class SynchronizrComFnsClass extends SynchronizrOpsClass{
+	constructor(props) {
+		super(props);
+	}
+	/**
+	 * Load data in this synchronizr from local storage
+	 * using the specified eventId
+	 * If the event does not exist, data will be cleared
+	 * @param eventId Event ID
+	 */
+	load(eventId){
+		SynchronizrUtils.load(eventId, this._data);
+	}
+
+	/**
+	 * Save data in this synchronizr to local storage
+	 * using the specified eventId
+	 * @param eventId Event ID
+	 */
+	save(eventId){
+		SynchronizrUtils.save(eventId, this._data);
+	}
+
+	/**
+	 * Pretty-print the state, for debugging
+	 */
+	printState(){
+		console.log("--------Synchronizr--------")
+		for(var x = 0; x < 255; x++){
+			if(this._data[x].length > 0){
+				console.log("[" + x + "]");
+				var dat = this._data[x];
+				for(var y = 0; y < dat.length; y++){
+					console.log("    [" + y + "]: " + U.printStr(dat[y]));
+				}
+			}
+		}
+		console.log("---------------------------")
+	}
+}
+
+
 /**
  * Synchronizer Receiver Class
  * This class is the Model in the MVC architecture of the fan side.
@@ -5,10 +75,17 @@
  * and the receive handler (set by setReceiveHandler()) will automatically
  * be called as described below.
  */
-class SynchronizrReceiver {
+class SynchronizrReceiver extends SynchronizrComFnsClass{
 	constructor() {
+		super();
 		var t = this;
 		t.reset();
+	}
+
+	isTransmitter(){return false}
+
+	getHashTarget(){
+		return this;
 	}
 
 	reset(){
@@ -19,12 +96,34 @@ class SynchronizrReceiver {
 			t._data[x] = [];
 	}
 
+	resetReceiver(){
+		this.reset();
+	}
+
 	/**
 	 * ONLY CALL THIS FROM THE TRANSMITTER. Used for diff generation
 	 * @returns data
 	 */
 	getDataForTxUseOnly() {
 		return this._data;
+	}
+
+	/**
+	 * Retrieve data from this Synchronizr.
+	 * If either parameter is out of bounds, returns undefined
+	 * @param num ArrNum to retrieve from
+	 * @param idx Element in the above array.
+	 *  If omitted, returns the length
+	 * @returns {Uint8Array} data[num][idx]
+	 */
+	getData(num, idx) {
+		var t = this;
+		var arr = this._data[num];
+		if(idx === undefined)
+			return arr.length;
+		if(!arr)
+			return;
+		return arr[idx];
 	}
 
 	/**
@@ -202,8 +301,9 @@ class SynchronizrReceiver {
 				default: // Just a normal string literal
 					let len = op * 256 + bytecode[ptr++];
 					var dat = [];
-					// If tacking onto end and not true, increment
 					if (writeArr === undefined) writeArr = [];
+
+					// If tacking onto end and not true, increment
 					if (changeType === writeArr.length - readArr.length)
 						changeType++;
 					else
@@ -222,7 +322,7 @@ class SynchronizrReceiver {
 		changes[arrNum] = changeType;
 
 		if (writeArr !== undefined && arrNum >= 0)
-			t._data [arrNum] = writeArr; // Write the last data value
+			t._data[arrNum] = writeArr; // Write the last data value
 
 		if (pendingAfter) {
 			// If more packets are coming, don't apply changes immediately
@@ -251,15 +351,10 @@ class SynchronizrReceiver {
  *     MTU - Maximum amount of data to send at once.
  * SendRemote() sends the highest priority changes first
  */
-class SynchronizrTransmitter {
+class SynchronizrTransmitter extends SynchronizrComFnsClass{
 	constructor() {
+		super();
 		var t = this;
-		// // Constants
-		t.MODE_WRITE = 0; // Overwrite
-		t.MODE_INSERT = 1; // Insert _data, move other
-		t.MODE_DELETE = 2; // Delete _data, move other
-		t.MODE_APPEND = 3; // Add _data to end
-
 		t._safeMode = 0; // Safe mode simplfies the output to try and suppress bugs
 		t._data = []; // Current local state
 		t._modifiedLocal = []; // Set entries to true upon state modification, used for local receive handler
@@ -268,6 +363,13 @@ class SynchronizrTransmitter {
 		for (var x = 0; x < 256; x++) {
 			t._data[x] = [];
 		}
+	}
+
+
+	isTransmitter(){return true}
+
+	getHashTarget(){
+		return this._rx;
 	}
 
 	/**
@@ -357,6 +459,15 @@ class SynchronizrTransmitter {
 		this._bowlCleared = true;
 	}
 
+	/**
+	 * Same as clearBowl(), but allows for hash-based renegotiation
+	 * (Right now it just calls clearBowl())
+	 * TODO support hash-based renegotation
+	 */
+	resetReceiver(){
+		this.clearBowl();
+	}
+
 
 	/**
 	 * Call this function after calling setData() to call the receive handler
@@ -372,11 +483,26 @@ class SynchronizrTransmitter {
 		this._modifiedLocal = [];
 	}
 
+	applyOpcodes(){
+		throw "SynchronizrTransmitter does not accept opcodes";
+	}
 
-	sendRemote(mtu) {
+
+	/**
+	 * Generate a packet to send over the network.
+	 * This packet MUST always be sent in the order it was generated
+	 * or errors will occur
+	 * @param mtu Target maximum packet length.
+	 *  At least one meaningful opcode must always be sent
+	 *  and the MTU may be exceeded in some cases
+	 * @param prepend {Array} Optional - Used to prepend higher-layer protocol opcode(s)
+	 * @returns {Uint8Array} Opcodes to send
+	 */
+	sendRemote(mtu, prepend) {
 		var t = this;
-		var toker = []; // Holds tokens
 		var currLen = 0;
+		var numPrepended = 0;
+		var toker = []; // Holds tokens
 		if (t._bowlCleared) {
 			// Inhale CHEECH CHEECH CHEECH CHEECH
 			toker.push([253, 255, 255, 255, 255]);
@@ -422,6 +548,52 @@ class SynchronizrTransmitter {
 		}
 		// Apply changes to internal receiver
 		t._rx.applyOpcodes(rtn);
+		if(prepend){
+			var rtn2 = new Uint8Array(rtn.length + prepend.length);
+			var ptr2 = 0;
+			for(var x = 0; x < prepend.length; x++)
+				rtn2[ptr2++] = prepend[x];
+			for(var x = 0; x < rtn.length; x++)
+				rtn2[ptr2++] = rtn[x];
+			return rtn2;
+		}
 		return rtn;
+	}
+}
+
+
+class SynchronizrHashr{
+	/**
+	 * Calculate the hash of an event.
+	 * This hash IS NOT TO BE USED FOR ANYTHING SECURITY-RELATED WHATSOEVER.
+	 * This hash is to be used to detect uninteded discrepancies in state
+	 * between client and server due to bugs.
+	 *
+	 * @param syn Synchronizr or Synchronizr data to hash
+	 * @param len {Number} Number of bytes of hash to compute. Currently only 16 is supported.
+	 * @returns {Uint8Array} a 128-bit (16-byte) hash
+	 */
+	static hash(syn, len){
+		if(syn._data)
+			syn = syn._data;
+		var blob = [];
+		for(var x = 0; x < syn.length; x++){
+			var arrx = syn[x];
+			for(var y = 0; y < arrx.length; y++){
+				var arry = arrx[y];
+				for(var z = 0; z < arry.length; z++){
+					blob.push(arry[z]);
+				}
+				blob.push(0);
+			}
+			blob.push(0);
+		}
+		var rtn = SynchronizrHashr.hashBlob(blob);
+		if(rtn.length !== len)
+			throw "Only lengths of " + rtn.length + " supported";
+		return rtn;
+	}
+	static hashBlob(blob){
+		return MD5.bmd5(blob);
 	}
 }
