@@ -170,8 +170,6 @@ class SynDiff {
 		// 	}
 		// }
 		// return ops;
-		// TODO if bytecode is not all in ranges (0-255), re-call this function with a zzzipping level of -1
-		// 	if you have not already done so. Otherwise, throw a fatal error.
 		// return {bc: new Uint8Array(bytecode), op: ops, readable: opsReadable};
 		return new Uint8Array(bytecode);
 	}

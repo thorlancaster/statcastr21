@@ -21,7 +21,7 @@
 				"../js/reliablechannel/ReliableChannel.js",
 				"UnitTest.js",
 				"TestSpectating.js",
-				"TestSynchronizrFull.js",
+				"TestSynchronizrTXRX.js",
 				"TestSynchronizrLSD.js",
 				"TestSynchronizrPerf.js",
 				"TestSynchronizrDiff.js"]);
@@ -35,7 +35,7 @@
 			var el = U.dce("div", "utRoot");
 			document.body.appendChild(el);
 			var t1 = new TestSynchronizrDiff(el, "Synchronizr Diff");
-			var t2 = new TestSynchronizrFull(el, "Synchronizr TX/RX");
+			var t2 = new TestSynchronizrTXRX(el, "Synchronizr TX/RX");
 			var t3 = new TestSynchronizrFullSafe(el, "Synchronizr SAFE");
 			var t4 = new TestSynchronizrPerf(el, "Synchronizr");
 			var t1_3 = new TestCombined(el, [t1, t2, t3], "Synchronizr");

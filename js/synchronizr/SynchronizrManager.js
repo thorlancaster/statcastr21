@@ -219,7 +219,7 @@ class SynchronizrManager extends SynchronizrOpsClass{
 			console.log(">> " + ops);
 			if(DEBUGGR)
 				changesFromLast =
-					DEBUGGR.invokeProtected(t._applyOpcodes.bind(t), t, ops, changesFromLast, pendingAfter);
+					DEBUGGR.invokeProtected(t._applyOpcodes.bind(t), ops, ops, changesFromLast, pendingAfter);
 			else
 				changesFromLast = t._applyOpcodes(ops, changesFromLast, pendingAfter);
 		}
@@ -279,6 +279,16 @@ class SynchronizrManager extends SynchronizrOpsClass{
 						actHash.push(ops[ptr++]);
 					}
 					t._onVerifyHash(len ? actHash : undefined);
+					break;
+				case 234: // Query Event Response
+					break;
+				case 233: // Query All Events response TODO implement
+					break;
+				case 230: // Admin joined event
+					break;
+				case 229: // Admin disconnected intentionally
+					break;
+				case 228: // Admin lost connection due to network
 					break;
 				default:
 					throw "Invalid Opcode " + op;

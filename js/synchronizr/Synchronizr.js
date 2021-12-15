@@ -263,7 +263,7 @@ class SynchronizrReceiver extends SynchronizrComFnsClass{
 					endRun = bytecode[ptr++] * 256 + bytecode[ptr++];
 					if (startRun === 65535 && endRun === 65535) { // CLEAR BOWL
 						bowlCleared = true;
-						for (var x = 0; x < 255; x++) {
+						for (var x = 0; x < 256; x++) {
 							t._data[x] = []; // Fully clear that section
 							changes[x] = true; // And fully reload. Reload everything
 							// If this command is called the application needs a nice green hit
@@ -332,7 +332,7 @@ class SynchronizrReceiver extends SynchronizrComFnsClass{
 		// if (bowlCleared && t._bowlClearHandler)
 		// 	t._bowlClearHandler();
 
-		return changeType;
+		return changes;
 	}
 }
 

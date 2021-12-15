@@ -1,5 +1,5 @@
 
-class TestSynchronizrFull extends UnitTest{
+class TestSynchronizrTXRX extends UnitTest{
 	constructor(root, text) {
 		super(root, text);
 	}
@@ -39,9 +39,6 @@ class TestSynchronizrFull extends UnitTest{
 			if(safe)
 				tx.setSafeMode(true);
 			var rx = new SynchronizrReceiver();
-			rx.setBowlClearHandler(function(){
-				console.log("BOWL WAS CLEARED CHEEECH");
-			})
 			tx.setData(0, 0, this.str2arr("bbgame"), tx.MODE_APPEND);
 			tx.setData(0, 0, this.str2arr("3.0.0"), tx.MODE_APPEND);
 
@@ -115,7 +112,6 @@ class TestSynchronizrFull extends UnitTest{
 			t.assertEquals(t.arr2Str(rx._data[1][7]), "Play8");
 			t.assertEquals(t.arr2Str(rx._data[1][8]), "Play9");
 
-			// TODO something needs to make a SHORT RUN happen (Code Coverage)
 			tx.setData(1, 1, this.str2arr("Play22"), tx.MODE_WRITE);
 			tx.setData(1, 4, this.str2arr("Play55"), tx.MODE_WRITE);
 
@@ -142,7 +138,7 @@ class TestSynchronizrFull extends UnitTest{
 	}
 }
 
-class TestSynchronizrFullSafe extends TestSynchronizrFull{
+class TestSynchronizrFullSafe extends TestSynchronizrTXRX{
 	constructor(root, text) {
 		super(root, text);
 	}

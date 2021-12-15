@@ -55,7 +55,7 @@ class TestSynchronizrLSD extends UnitTest {
 			sm.send();
 			sm._synchronizr.getHashTarget().printState();
 			sm.setData(1, 0, this.str2arr("Play9"), sm.MODE_APPEND);
-			// TODO something needs to make a SHORT RUN happen (Code Coverage)
+
 			sm.setData(1, 1, this.str2arr("Play22"), sm.MODE_WRITE);
 			sm.setData(1, 4, this.str2arr("Play55"), sm.MODE_WRITE);
 
@@ -64,7 +64,7 @@ class TestSynchronizrLSD extends UnitTest {
 
 			sm.verifyHash();
 
-			if(false) { // Set to true and Synchronizr will disconnect and become a client
+			if(true) { // Set to true and Synchronizr will disconnect and become a client
 				setTimeout(function () { // Give the server a second to process the info
 					this.assertEquals(sm.lastVerifySuccess(), true, "Hash Verification");
 					console.log("Setting SynchronizrManager to Receiver and reconnecting")
