@@ -26,7 +26,7 @@ class Debuggr{
 		try{
 			if(!dbgRoot)
 				throw "dbgRoot is null";
-			fn(arg, arg2, arg3);
+			return fn(arg, arg2, arg3);
 		} catch(e){
 			this.logError(e, dbgRoot);
 		}

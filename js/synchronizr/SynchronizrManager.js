@@ -40,16 +40,20 @@ class SynchronizrManager extends SynchronizrOpsClass{
 		super();
 		var t = this;
 
-		t._MTU_SECONDS = 3; // How many seconds of backpressure we will try to limit ourselves to
+		// How many seconds of backpressure we will try to limit ourselves to
+		t._MTU_SECONDS = 3;
 		t._declOps();
+		// Connection variables
 		t._server = undefined;
 		t._serverChanged = false;
 
+		// Variables for transmit / admin
 		t._isTX = false;
 		t._isTXCurrent = false;
 		t._TXChanged = false;
 		t._lastVerifySuccess = undefined;
 
+		// Variables for authentication / state handling
 		t._username = undefined;
 		t._password = undefined;
 		t._event = undefined;
@@ -57,14 +61,28 @@ class SynchronizrManager extends SynchronizrOpsClass{
 		t._eventChanged = true;
 		t._credsChanged = false;
 
+		// Variables for underlying objects and information
 		t._synchronizr = undefined;
 		t._channel = undefined;
 		t._MTU = 0;
+
+		// Callbacks
+		t._receiveHandler = undefined;
+
 	}
 
 	close(){
 		if(this._channel)
 			this._channel.close();
+	}
+
+	/** Set the handler that will be called when the (spectating) Synchronizr receives data
+	 * The function will be called with the Synchronizr as the first argument
+	 * and the Changes array as the second argument
+	 * @param fn Callback function
+	 */
+	setReceiveHandler(fn){
+		this._receiveHandler = fn;
 	}
 
 	/**
@@ -130,7 +148,7 @@ class SynchronizrManager extends SynchronizrOpsClass{
 			if(t._channel)
 				t._channel.close();
 			t._channel = ReliableChannel.create(t._server);
-			t._channel.setReceiveHandler(t._receiveHandler.bind(t));
+			t._channel.setReceiveHandler(t._receiveHandlerInternal.bind(t));
 			t._channel.connect();
 			t._MTU = Math.ceil(t._channel.getBandwidth() * t._MTU_SECONDS);
 
@@ -190,31 +208,43 @@ class SynchronizrManager extends SynchronizrOpsClass{
 		}
 	}
 
-	_receiveHandler(e){
+	_receiveHandlerInternal(e){
+		var t = this;
 		if(e)
 			console.log("New Status: " + e);
-		while(this._channel.available()){
-			var ops = this._channel.read();
+		var changesFromLast = undefined;
+		while(t._channel.available()){
+			var pendingAfter = t._channel.available() > 1;
+			var ops = t._channel.read();
 			console.log(">> " + ops);
 			if(DEBUGGR)
-				DEBUGGR.invokeProtected(this._applyOpcodes.bind(this), this, ops);
+				changesFromLast =
+					DEBUGGR.invokeProtected(t._applyOpcodes.bind(t), t, ops, changesFromLast, pendingAfter);
 			else
-				this._applyOpcodes(ops);
+				changesFromLast = t._applyOpcodes(ops, changesFromLast, pendingAfter);
+		}
+		if(t._receiveHandler){
+			if(DEBUGGR)
+				DEBUGGR.invokeProtected(t._receiveHandler.bind(t), t, t._synchronizr, changesFromLast);
+			else
+				t._receiveHandler(t._synchronizr, changesFromLast);
 		}
 	}
 
 	/**
 	 * Apply bytecode from the server
 	 * @param ops {Uint8Array} Incoming bytecode
+	 * @param changesFromLast See Synchronizr
+	 * @param pendingAfter See Synchronizr
 	 * @private
 	 */
-	_applyOpcodes(ops){
+	_applyOpcodes(ops, changesFromLast, pendingAfter){
 		var t = this;
 		var op0 = ops[0];
 		ops = ops.slice(1);
 		switch(op0){
 			case 255: // Synchronizr
-				t._synchronizr.applyOpcodes(ops);
+				changesFromLast = t._synchronizr.applyOpcodes(ops, changesFromLast, pendingAfter);
 				break;
 			case 254:
 				t._applyManagerial(ops);
@@ -228,6 +258,7 @@ class SynchronizrManager extends SynchronizrOpsClass{
 			default:
 				throw "Invalid Opcode " + op0;
 		}
+		return changesFromLast;
 	}
 
 	_applyManagerial(ops){

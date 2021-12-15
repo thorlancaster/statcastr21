@@ -163,16 +163,6 @@ class SynchronizrReceiver extends SynchronizrComFnsClass{
 		this._dbgRoot = d;
 	}
 
-	/**
-	 * Set a function to be called whenever a bowl-clearing opcode is detected in a packet.
-	 * The function will be called at the end of the packet, giving the application a fresh
-	 * start.
-	 * Using this method may not be needed in some applications
-	 * @param f Bowl clear handler function
-	 */
-	setBowlClearHandler(f) {
-		this._bowlClearHandler = f;
-	}
 
 	/**
 	 * Apply opcodes (see SynchronizrSyntax.txt) to this Synchronizr.
@@ -336,8 +326,13 @@ class SynchronizrReceiver extends SynchronizrComFnsClass{
 		}
 
 // Call bowl clear handler after everything else is done
-		if (bowlCleared && t._bowlClearHandler)
-			t._bowlClearHandler();
+		// TODO bowl clear handler should set all non-zero arrNums as changed
+		//  in the changes array
+		// TODO there shouldn't be a bowl clear handler
+		// if (bowlCleared && t._bowlClearHandler)
+		// 	t._bowlClearHandler();
+
+		return changeType;
 	}
 }
 

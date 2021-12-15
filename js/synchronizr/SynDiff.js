@@ -179,8 +179,8 @@ class SynDiff {
 	/**
 	 * Based on John Resig's implementation of the Diff algorithm
 	 * * Released under the MIT license.
-	 * @param o Old _data
-	 * @param n New _data
+	 * @param o Old data
+	 * @param n New data
 	 */
 	static diff(o, n) {
 		var ns = {};

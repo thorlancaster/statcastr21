@@ -19,7 +19,7 @@ class TestSynchronizrLSD extends UnitTest {
 			sm.setServer(U.DEFAULT_SERVER);
 			sm.setTX(true);
 			sm.setCredentials(U.TESTING_USERNAME, U.TESTING_PASSWORD);
-			sm.setEvent("fmlbb2101");
+			sm.setEvent("fmlbbtest2101");
 			sm.connect();
 
 			sm.setData(0, 0, this.str2arr("bbgame"), sm.MODE_APPEND);
@@ -64,18 +64,20 @@ class TestSynchronizrLSD extends UnitTest {
 
 			sm.verifyHash();
 
-			setTimeout(function(){ // Give the server a second to process the info
-				this.assertEquals(sm.lastVerifySuccess(), true, "Hash Verification");
-				console.log("Setting SynchronizrManager to Receiver and reconnecting")
-				sm.setTX(false);
-				sm.connect();
+			if(false) { // Set to true and Synchronizr will disconnect and become a client
+				setTimeout(function () { // Give the server a second to process the info
+					this.assertEquals(sm.lastVerifySuccess(), true, "Hash Verification");
+					console.log("Setting SynchronizrManager to Receiver and reconnecting")
+					sm.setTX(false);
+					sm.connect();
 
-				sm._synchronizr.getHashTarget().printState();
-				setTimeout(function(){
 					sm._synchronizr.getHashTarget().printState();
-				}, 1000);
+					setTimeout(function () {
+						sm._synchronizr.getHashTarget().printState();
+					}, 1000);
 
-			}.bind(this), 1000);
+				}.bind(this), 1000);
+			}
 
 
 			setTimeout(function (){
