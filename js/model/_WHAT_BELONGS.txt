@@ -1,0 +1,4 @@
+This folder contains classes that:
+    1: Model the data of a sport
+    2: Don't do anything to display or render it
+

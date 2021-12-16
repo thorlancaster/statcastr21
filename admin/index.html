@@ -12,11 +12,25 @@
 	</style>
 
 	<script>
+		function initApp(){
+			new AdminApp(document.body).start();
+		}
 		function ldrBeginLoad() {
 			var l = new Loader("../ico/favicon-192.png");
-			l.setCallback(function(){
-				console.log("TODO invoke main class here");
-			})
+			l.setCallback(initApp);
+			l.loadScripts([
+				"../js/Utils.js",
+				"../js/Debuggr.js",
+				"../js/synchronizr/Synchronizr.js",
+				"../js/synchronizr/SynDiff.js",
+				"../js/synchronizr/SynchronizrManager.js",
+				"../js/reliablechannel/ReliableChannel.js",
+				"../js/ui/UIPanel-all.js",
+				"AdminApp.js"
+			]);
+			l.loadStyles([
+				"../css/main.css",
+			]);
 			l.load();
 		}
 	</script>

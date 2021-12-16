@@ -8,13 +8,13 @@
  * * Synchronizr later - add arrNum selection to above
  * * Manager layer - Each packet has a byte prepended to signify type
  */
-class SynchronizrManager extends SynchronizrOpsClass{
+class SynchronizrManager extends SynchronizrOpsClass {
 	/**
 	 * Declare internal opcodes.
 	 * See BYTECODE.txt for details
 	 * @private
 	 */
-	_declOps(){
+	_declOps() {
 		var t = this;
 		t._OP_STANDARD = 255;
 		t._OP_MANAGERIAL = 254;
@@ -29,7 +29,7 @@ class SynchronizrManager extends SynchronizrOpsClass{
 
 		t._PROP_EVENTID = 255;
 		t._PROP_EVENTSIZE = 254;
-		t._PROP_EVENTNAME = 253; // Name and Info grab from
+		t._PROP_EVENTGAMENAME = 253; // Name and Info grab from
 		t._PROP_EVENTINFO = 252; // [0][0] and [0][1] respectively
 		t._PROP_ADMINCONNECTED = 248;
 		t._PROP_PRIVILIGELEVEL = 247;
@@ -68,11 +68,12 @@ class SynchronizrManager extends SynchronizrOpsClass{
 
 		// Callbacks
 		t._receiveHandler = undefined;
+		t._infoHandler = undefined;
 
 	}
 
-	close(){
-		if(this._channel)
+	close() {
+		if (this._channel)
 			this._channel.close();
 	}
 
@@ -81,8 +82,17 @@ class SynchronizrManager extends SynchronizrOpsClass{
 	 * and the Changes array as the second argument
 	 * @param fn Callback function
 	 */
-	setReceiveHandler(fn){
+	setReceiveHandler(fn) {
 		this._receiveHandler = fn;
+	}
+
+	/**
+	 * Handler will be called whenever a relevant managerial message is received.
+	 * Argument of the function will be {type:string data:[optional]}
+	 * @param fn Callback function
+	 */
+	setInfoHandler(fn){
+		this._infoHandler = fn;
 	}
 
 	/**
@@ -90,9 +100,9 @@ class SynchronizrManager extends SynchronizrOpsClass{
 	 * Only takes effect after a call to connect()
 	 * @param server URL of server
 	 */
-	setServer(server){
+	setServer(server) {
 		var t = this;
-		if(t._server !== server){
+		if (t._server !== server) {
 			t._server = server;
 			t._serverChanged = true;
 		}
@@ -103,13 +113,13 @@ class SynchronizrManager extends SynchronizrOpsClass{
 	 * If the event has changed, saves and reloads the synchronizr.
 	 * @param evt Event ID, will be converted to a String if not already
 	 */
-	setEvent(evt){
+	setEvent(evt) {
 		evt = "" + evt;
 		var t = this;
-		if(t._event !== evt){
+		if (t._event !== evt) {
 			t._event = evt;
 			t._eventChanged = true;
-			if(t._channel)
+			if (t._channel)
 				t.send();
 		}
 	}
@@ -119,9 +129,9 @@ class SynchronizrManager extends SynchronizrOpsClass{
 	 * Only takes effect after a call to connect()
 	 * @param tx True to TX, false to RX
 	 */
-	setTX(tx){
+	setTX(tx) {
 		var t = this;
-		if(t._isTX !== tx){
+		if (t._isTX !== tx) {
 			t._isTX = tx;
 			t._TXChanged = true;
 		}
@@ -134,18 +144,18 @@ class SynchronizrManager extends SynchronizrOpsClass{
 	 * @param reconnect {Boolean} true if connection was lost
 	 *  and we are calling connect() to try and re-establish it
 	 */
-	connect(reconnect){
+	connect(reconnect) {
 		// TODO attempt to resume session when using reconnect
 		// TODO each connection will have a session id
 		//  on both client and server
 		var t = this;
-		if(t._serverChanged || t._TXChanged){
+		if (t._serverChanged || t._TXChanged) {
 			t._isTXCurrent = t._isTX;
-			if(t._isTX)
+			if (t._isTX)
 				t._synchronizr = new SynchronizrTransmitter();
 			else
 				t._synchronizr = new SynchronizrReceiver();
-			if(t._channel)
+			if (t._channel)
 				t._channel.close();
 			t._channel = ReliableChannel.create(t._server);
 			t._channel.setReceiveHandler(t._receiveHandlerInternal.bind(t));
@@ -172,7 +182,7 @@ class SynchronizrManager extends SynchronizrOpsClass{
 		// OpBuffer will be filled regardless of MTU
 		var t = this;
 		var s = t._synchronizr
-		if(!t._channel)
+		if (!t._channel)
 			throw "connect() must be called before send()";
 
 		// OpBuffer will be filled with all pending managerial data
@@ -181,50 +191,51 @@ class SynchronizrManager extends SynchronizrOpsClass{
 			t._credsChanged = false;
 			t._pushUsernamePassword(opBuffer, t._username, t._password);
 		}
-		if(t._eventChanged){
+		if (t._eventChanged) {
 			t._eventChanged = false;
-			if(t._lastSynEvent)
+			if (t._lastSynEvent)
 				s.save(t._lastSynEvent);
 			s.resetReceiver();
 			s.load(t._event);
-			if(s.isTransmitter())
-				t._pushCreateJoinEvent(opBuffer, t._event);
-			else
-				t._pushSpectateEvent(opBuffer, t._event);
-
+			if (t._event) {
+				if (s.isTransmitter())
+					t._pushCreateJoinEvent(opBuffer, t._event);
+				else
+					t._pushSpectateEvent(opBuffer, t._event);
+			}
 		}
-		if(opBuffer.length > 1){
+		if (opBuffer.length > 1) {
 			t._channel.write(opBuffer);
 		}
 
 		// Limit updates to prevent excessive backpressure the resulting lagginess
 		var effMTU = t._MTU - t._channel.getBackpressure();
 		// SynBuffer will be filled with data from Synchronizr if we have room for more
-		if(s.isTransmitter() && effMTU - opBuffer.length > 3){
+		if (s.isTransmitter() && effMTU - opBuffer.length > 3) {
 			var synBuffer = t._synchronizr.sendRemote(effMTU - opBuffer.length, [t._OP_STANDARD]);
-			if(synBuffer.length > 1){
+			if (synBuffer.length > 1) {
 				t._channel.write(synBuffer);
 			}
 		}
 	}
 
-	_receiveHandlerInternal(e){
+	_receiveHandlerInternal(e) {
 		var t = this;
-		if(e)
+		if (e)
 			console.log("New Status: " + e);
 		var changesFromLast = undefined;
-		while(t._channel.available()){
+		while (t._channel.available()) {
 			var pendingAfter = t._channel.available() > 1;
 			var ops = t._channel.read();
 			console.log(">> " + ops);
-			if(DEBUGGR)
+			if (DEBUGGR)
 				changesFromLast =
 					DEBUGGR.invokeProtected(t._applyOpcodes.bind(t), ops, ops, changesFromLast, pendingAfter);
 			else
 				changesFromLast = t._applyOpcodes(ops, changesFromLast, pendingAfter);
 		}
-		if(t._receiveHandler){
-			if(DEBUGGR)
+		if (changesFromLast && t._receiveHandler) {
+			if (DEBUGGR)
 				DEBUGGR.invokeProtected(t._receiveHandler.bind(t), t, t._synchronizr, changesFromLast);
 			else
 				t._receiveHandler(t._synchronizr, changesFromLast);
@@ -238,11 +249,11 @@ class SynchronizrManager extends SynchronizrOpsClass{
 	 * @param pendingAfter See Synchronizr
 	 * @private
 	 */
-	_applyOpcodes(ops, changesFromLast, pendingAfter){
+	_applyOpcodes(ops, changesFromLast, pendingAfter) {
 		var t = this;
 		var op0 = ops[0];
 		ops = ops.slice(1);
-		switch(op0){
+		switch (op0) {
 			case 255: // Synchronizr
 				changesFromLast = t._synchronizr.applyOpcodes(ops, changesFromLast, pendingAfter);
 				break;
@@ -261,13 +272,13 @@ class SynchronizrManager extends SynchronizrOpsClass{
 		return changesFromLast;
 	}
 
-	_applyManagerial(ops){
+	_applyManagerial(ops) {
 		var t = this;
 		var sendBuf = [];
 		var ptr = 0;
-		while(ptr < ops.length){
+		while (ptr < ops.length) {
 			var op = ops[ptr++];
-			switch(op){
+			switch (op) {
 				case 240: // Verify Hash Request
 					// Needs implemented for server-initiated hash requests
 					break;
@@ -275,7 +286,7 @@ class SynchronizrManager extends SynchronizrOpsClass{
 				case 239: // Verify Hash Response
 					var len = ops[ptr++];
 					var actHash = [];
-					for(var x = 0; x < len; x++){
+					for (var x = 0; x < len; x++) {
 						actHash.push(ops[ptr++]);
 					}
 					t._onVerifyHash(len ? actHash : undefined);
@@ -283,6 +294,18 @@ class SynchronizrManager extends SynchronizrOpsClass{
 				case 234: // Query Event Response
 					break;
 				case 233: // Query All Events response TODO implement
+					var nEvents = ops[ptr++] * 256 + ops[ptr++];
+					var rtn = {};
+					for (var x = 0; x < nEvents; x++) {
+						var lEvent = ops[ptr++] * 256 + ops[ptr++];
+						var eventInfo = t.getEventInfoFromBC(ops, ptr, lEvent);
+						if (eventInfo.id)
+							rtn[eventInfo.id] = eventInfo;
+						else console.error("Query all returned event with no ID");
+						ptr += lEvent;
+					}
+					var msg = {type: 233, data: rtn}
+					t._invokeManagerInfoCallback(msg);
 					break;
 				case 230: // Admin joined event
 					break;
@@ -296,14 +319,81 @@ class SynchronizrManager extends SynchronizrOpsClass{
 		}
 	}
 
-	_handleServerError(ops, wasFatal){
-		if(wasFatal)
+	/**
+	 * Parse a single event info response
+	 * @param buf Buffer of raw bytecode
+	 * @param ptr Start position in bytecode
+	 * @param len Length
+	 */
+	getEventInfoFromBC(buf, ptr, len) {
+		var t = this;
+		var id = undefined;
+		var size = undefined;
+		var game = undefined;
+		var info = undefined;
+		var admin = undefined;
+		var privilege = 0;
+		while (ptr < len) {
+			var op = buf[ptr++];
+			var eventId = undefined;
+			switch (op) {
+				case 255: //EventId
+					var len2 = buf[ptr++] * 256 + buf[ptr++];
+					id = t._getString(buf, ptr, len2);
+					ptr += len2;
+					break;
+				case 254: //Size
+					size = buf[ptr++] * 65536 + buf[ptr++] * 256 + buf[ptr++];
+					break;
+				case 253: //Game
+					var len2 = buf[ptr++] * 256 + buf[ptr++];
+					game = t._getString(buf, ptr, len2);
+					ptr += len2;
+					break;
+				case 252: //Info
+					var len2 = buf[ptr++] * 256 + buf[ptr++];
+					info = buf.subarray(ptr, ptr + len2);
+					ptr += len2;
+					break;
+				case 248:
+					var protocol = buf[ptr++];
+					var len2 = buf[ptr++] * 256 + buf[ptr++];
+					var uname = t._getString(buf, ptr, len2);
+					ptr += len2;
+					admin = {protocol, uname};
+					break;
+				case 247:
+					privilege = buf[ptr++];
+			}
+		}
+		var rtn = {};
+		if (id) rtn.id = id;
+		if (size) rtn.size = size;
+		if (game) rtn.game = game;
+		if (info) rtn.info = info;
+		if (admin) rtn.admin = admin;
+		rtn.privilege = privilege;
+		return rtn;
+	}
+
+	_invokeManagerInfoCallback(data) {
+		var t = this;
+		if (t._infoHandler) {
+			if (DEBUGGR)
+				DEBUGGR.invokeProtected(t._infoHandler, t, data);
+			else
+				t._infoHandler(data);
+		}
+	}
+
+	_handleServerError(ops, wasFatal) {
+		if (wasFatal)
 			console.error("Fatal Server Error: " + ops);
 		else
 			console.error("Non-Fatal Server Error: " + ops);
 	}
 
-	lastVerifySuccess(){
+	lastVerifySuccess() {
 		return this._lastVerifySuccess;
 	}
 
@@ -316,11 +406,28 @@ class SynchronizrManager extends SynchronizrOpsClass{
 	 * @param val Array or Uint8Array to write.
 	 * @param mode 0 for write, 1 for insert, 2 for delete, 3 for append
 	 */
-	setData(num, idx, val, mode){
+	setData(num, idx, val, mode) {
 		var t = this;
-		if(!t._synchronizr || !t._synchronizr.isTransmitter())
+		if (!t._synchronizr || !t._synchronizr.isTransmitter())
 			throw "SynchronizrManager not initialized as Transmitter";
 		t._synchronizr.setData(num, idx, val, mode);
+	}
+
+	/**
+	 * Request a listing of live events from the server
+	 */
+	requestEventList() {
+		var t = this;
+		var buf = [];
+		t._pushOpcode(buf, 254); // Type: Managerial
+		t._pushOpcode(buf, 253); // Query all events
+		t._pushOpcode(buf, 255); // Event ID
+		t._pushOpcode(buf, 253); // Game type
+		t._pushOpcode(buf, 252); // Info
+		t._pushOpcode(buf, 248); // AdminConnected
+		t._pushOpcode(buf, 247); // PrivilegeLevel
+		t._pushOpcode(buf, 0); // End of query
+		t._channel.write(buf);
 	}
 
 	/**
@@ -329,9 +436,9 @@ class SynchronizrManager extends SynchronizrOpsClass{
 	 * @param uname Username
 	 * @param pw Password
 	 */
-	setCredentials(uname, pw){
+	setCredentials(uname, pw) {
 		var t = this;
-		if(t._username !== uname || t._password !== pw){
+		if (t._username !== uname || t._password !== pw) {
 			t._credsChanged = true;
 			t._username = uname;
 			t._password = pw;
@@ -347,10 +454,10 @@ class SynchronizrManager extends SynchronizrOpsClass{
 	 * and the error will be corrected automatically.
 	 * // TODO do this
 	 */
-	verifyHash(){
+	verifyHash() {
 		var thisHash = SynchronizrHashr.hash(this._synchronizr.getHashTarget(), 16);
 		var buf = [254, 240, 16]; // Manager/VerifyHash/Len=16
-		for(var x = 0; x < thisHash.length; x++){
+		for (var x = 0; x < thisHash.length; x++) {
 			buf.push(thisHash[x]);
 		}
 		console.log(U.printStr(thisHash, true));
@@ -363,9 +470,9 @@ class SynchronizrManager extends SynchronizrOpsClass{
 	 * @param actualHash Undefined if success, Hash of server if failure
 	 * @private
 	 */
-	_onVerifyHash(actualHash){
+	_onVerifyHash(actualHash) {
 		var t = this;
-		if(!actualHash){
+		if (!actualHash) {
 			t._lastVerifySuccess = true;
 			console.log("Verify Hash Successful");
 		} else {
@@ -378,14 +485,23 @@ class SynchronizrManager extends SynchronizrOpsClass{
 
 	// TODO LOW_PRIORITY move below pushing code to separate class
 	//  and have all classes that push opcodes inherit/use it
-	_pushUsernamePassword(buf, uname, pw){
+
+	_getString(buf, idx, len) {
+		var rtn = "";
+		for (var x = idx; x < idx + len; x++) {
+			rtn += String.fromCharCode(buf[x]);
+		}
+		return rtn;
+	}
+
+	_pushUsernamePassword(buf, uname, pw) {
 		var t = this;
 		t._pushOpcode(buf, t._OP_SET_CREDENTIALS);
 		t._pushString(buf, uname);
 		t._pushString(buf, pw);
 	}
 
-	_pushCreateJoinEvent(buf, eventId){
+	_pushCreateJoinEvent(buf, eventId) {
 		var t = this;
 		t._pushOpcode(buf, t._OP_CREATE_EVENT);
 		var buf2 = [];
@@ -396,13 +512,13 @@ class SynchronizrManager extends SynchronizrOpsClass{
 		t._pushString(buf, buf2);
 	}
 
-	_pushSpectateEvent(buf, eventId){
+	_pushSpectateEvent(buf, eventId) {
 		var t = this;
 		t._pushOpcode(buf, t._OP_SPECTATE_EVENT);
 		t._pushString(buf, eventId);
 	}
 
-	_pushOpcode(buf, op){
+	_pushOpcode(buf, op) {
 		buf.push(op);
 	}
 
@@ -412,16 +528,15 @@ class SynchronizrManager extends SynchronizrOpsClass{
 	 * @param str String or array to write
 	 * @private
 	 */
-	_pushString(buf, str){
+	_pushString(buf, str) {
 		var len = str.length;
 		buf.push((len << 8) & 0xFF);
 		buf.push((len) & 0xFF);
-		if(typeof str === "string"){
-			for(var x = 0; x < str.length; x++)
+		if (typeof str === "string") {
+			for (var x = 0; x < str.length; x++)
 				buf.push(str.charCodeAt(x));
-		}
-		else {
-			for(var x = 0; x < str.length; x++)
+		} else {
+			for (var x = 0; x < str.length; x++)
 				buf.push(str[x]);
 		}
 	}

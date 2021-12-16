@@ -2,13 +2,21 @@ class Utils{
 	constructor() {
 
 	}
-	dge(n){
+	CLEAR(el){
+		while (el.firstChild) {
+			el.removeChild(el.lastChild);
+		}
+	}
+	DGE(n){
 		return document.getElementById(n);
 	}
-	dce(tag, id, cls){
+	DCE(tag, cls1, cls2, cls3, cls4){
 		var rtn = document.createElement(tag);
-		if(id) rtn.id = id;
-		if(cls) rtn.className = cls;
+		var rtc = rtn.classList;
+		if(cls1) rtc.add(cls1);
+		if(cls2) rtc.add(cls2);
+		if(cls3) rtc.add(cls3);
+		if(cls4) rtc.add(cls4);
 		return rtn;
 	}
 	get DEFAULT_SERVER(){return "wss://localhost:7203"}

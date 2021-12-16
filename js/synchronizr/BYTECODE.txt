@@ -49,6 +49,9 @@ SynchronizrManager:
 
 	234: Query Event Response
 	233: Query All Events Response
+		<nEvents:2Byte>
+			<eventLen:2Byte>
+				<eventProps>
 
 	230: Admin joined event
 	229: Admin disconnected [Intentionally]
@@ -58,7 +61,8 @@ SynchronizrManager:
 	::EventProps
 	255: EventId (Unless you asked with it)
 	254: Event size bytes <uint24>
-	253: Event name <Len:2byte><data[arrNum:0, idx:0]>
+	253: Event game <Len:2byte><data[arrNum:0, idx:0]>
+		// ex "bbgame", "fbgame", "vbgame"
 	252: Event info<Len:2byte><data[arrNum:0, idx:1]>
 	248: AdminConnected <ProtocolId:byte> <uname:String>
 		ProtocolId: 204 Websocket, 237 LoRa, ...

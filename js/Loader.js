@@ -107,7 +107,7 @@ class Loader{
 		el.appendChild(stl);
 		el.style.fontFamily = "roboto, sans-serif";
 		el.style.color = "#FFF";
-		el.style.background = "#334";
+		el.style.background = "linear-gradient(var(--main-bg1), var(--main-bg2))";
 		el.style.display = "flex";
 		el.style.height = "100vh";
 		el.style.justifyContent = "center";

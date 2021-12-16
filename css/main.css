@@ -1,6 +1,287 @@
+
+html, body{
+    width: 100%;
+    height: 100%;
+}
+
 body{
-    background: #334;
+    /* The below chunk of values is intended to be changed by the Skin, if present */
+    --default-border-radius: 0.2em;
+    --desktop-font-sz: 1em;
+    --mobile-font-sz: 0.85em;
+    --disabled-fg: #999;
+    --main-bg1: #344;
+    --main-bg15: #333;
+    --main-bg2: #111;
+    --link-color: #07F;
+    --link-color-hover: #FA0;
+    --semitransparent-bg: #334444E3;
+    --main-fg: #FFF;
+    --main-valid: #FFF;
+    --main-invalid: #F98;
+    --team-color1: #F00;
+    --team-colorPly: #F22;
+    --opp-color1: #05F;
+    --opp-colorPly: #4DF;
+    --gradient-bg: linear-gradient(var(--main-bg1), var(--main-bg2));
+    --sel-fg: #FF0;
+    --sel-bg: #000;
+    --click-fg: #F60;
+    --click-bg: #000;
+    --loading-col1: #F00;
+    --loading-col2: #FFF;
+
+    background: var(--main-bg1);
+    background: var(--gradient-bg);
+    color: #FFF;
+    font-family: "Helvetica", "sans-serif";
+
     margin: 0;
-    display: flex;
+    display: block;
     justify-content: center;
+    user-select: none;
+    touch-action: manipulation;
+    overscroll-behavior: contain;
+}
+
+.scPlayerTeam, .scPlayerOpp{
+    background: var(--sel-bg);
+    border-radius: var(--default-border-radius);
+    padding-left: 0.2em;
+    padding-right: 0.2em;
+    font-weight: bold;
+}
+.scPlayerTeam{
+    color: var(--team-colorPly);
+}
+.scPlayerOpp{
+    color: var(--opp-colorPly);
+}
+
+input{
+    background: var(--main-valid);
+}
+input.invalid{
+    background: var(--main-invalid);
+}
+
+.appRoot{
+    --view-margin: 6%;
+    font-size: var(--desktop-font-sz);
+}
+.appRoot.mobile{
+    --view-margin: 1px;
+    font-size: var(--mobile-font-sz);
+}
+
+.link{
+    text-decoration: underline;
+    font-weight: bold;
+    color: var(--link-color);
+    transition: color 0.2s;
+}
+
+.link:hover{
+    color: var(--link-color-hover);
+}
+
+.dialog{
+    opacity: 0;
+    transition: opacity 0.15s;
+}
+.dialog .dialogBox{
+    transform: scale(0.5);
+    transition: transform 0.15s;
+}
+.dialog.showing{
+    opacity: 1;
+}
+.dialog.showing .dialogBox{
+    transform: scale(1.0);
+}
+
+.toast{
+    z-index: 3;
+    position: fixed;
+    bottom: 1.2em;
+    text-align: center;
+    width: 100%;
+    pointer-events: none;
+    transition: opacity 0.5s;
+}
+.toast span{
+    background: var(--main-bg1);
+    border: 1px solid var(--main-bg2);
+    padding: 0.5em;
+    border-radius: 1em;
+}
+.toast.ending{
+    opacity: 0;
+}
+
+.uiPanel{
+    display: flex;
+    flex-grow: 1;
+    flex-shrink: 1;
+    box-sizing: border-box;
+    overflow: hidden;
+}
+
+.scoreDisplayHeader{
+    top: 0;
+    position: sticky;
+}
+
+.viewContainer{
+    width: 100%;
+    overflow: auto;
+}
+
+/* A standard view display, with variable sizing and margins */
+.view{
+    --margin: 2.2em;
+    margin: var(--margin) var(--view-margin);
+    background: var(--gradient-bg);
+    border: 1px solid black;
+}
+
+/* A view display that takes up the entire screen. Ex. Scoreboards */
+.viewFull{
+    --margin: 0;
+    width: 100%;
+    height: 100%;
+}
+
+/* A thin, horizontal bar with tabs, used to select items */
+.tabSelector, .tabSelectorMobileDD{
+    background: linear-gradient(var(--main-bg15), var(--main-bg1));
+}
+.tabSelectorItem{
+    transition: color 0.2s, background 0.2s;
+    font-weight: 500;
+}
+.tabSelectorItem.selected{
+    color: var(--sel-fg);
+    background: var(--sel-bg);
+    font-weight: 700;
+}
+
+/* An element that holds a Button UI control */
+.buttonField{
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.buttonField.fullSize button{
+    width: 100%;
+    height: 100%;
+}
+.buttonField button{
+    cursor: pointer;
+    font-size: 1.1em;
+    border: 2px solid;
+    background: var(--main-bg1);
+    border-color: var(--main-bg2);
+    color: var(--main-fg);
+    transition: color 0.5s, background 0.5s;
+}
+.buttonField button.disabled{
+    color: var(--disabled-fg);
+}
+.buttonField button.sel{
+    background: var(--sel-fg);
+    color: var(--sel-bg);
+}
+.buttonField button.click{
+    background: var(--click-fg);
+    color: var(--click-bg);
+    transition: color 0s, background 0s;
+}
+.buttonField button:focus {outline:0;}
+
+/* An element that holds a slider checkbox */
+.checkboxField .switch{
+    position: relative;
+    display: inline-block;
+    width: 2em;
+    height: 1em;
+}
+.checkboxField .switch input{
+    opacity: 0; width: 0; height: 0;
+}
+.checkboxField .slider{
+    position: absolute;
+    cursor: pointer;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background-color: var(--sel-bg);
+    color: var(--sel-fg);
+    transition: .4s;
+}
+.checkboxField .slider:before {
+    position: absolute;
+    color: #0000;
+    content: " ";
+    line-height: 1em;
+    font-size: 0.8em;
+    height: 1em;
+    width: 1em;
+    left: 0.125em;
+    bottom: 0.125em;
+    background-color: var(--disabled-fg);
+    transition: .4s;
+}
+.checkboxField input:focus + .slider {
+    box-shadow: 0 0 1px var(--sel-fg);
+}
+.checkboxField input:checked + .slider:before {
+    transform: translateX(1.25em);
+    color: #000;
+    background: var(--sel-fg);
+    content: "✔";
+}
+
+/* An element that holds a table, usually with some type of stats in it*/
+.tableField{
+    user-select: text;
+}
+.tableField table, .tableField td, .tableField th{
+    border: 1px solid #000;
+    height: 1em;
+}
+.tableField table .highlight{
+    color: var(--sel-bg);
+    background: var(--sel-fg);
+}
+.tableField th, .tableField td{
+    padding-left: 0.2em;
+}
+.tableField th{
+    text-align: left;
+}
+
+/* An element that holds some text (or possibly HTML) */
+.textField{
+    align-items: center;
+    justify-content: center;
+    white-space: nowrap;
+}
+
+
+/* Utility classes */
+#main{
+    position: fixed;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+.fullscreen{
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+}
+
+.fillparent{
+    width: 100%;
+    height: 100%;
 }

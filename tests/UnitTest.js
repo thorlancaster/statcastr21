@@ -3,13 +3,13 @@ class UnitTest{
 		var t = this;
 		t.root = root;
 		if(root){
-			var el = U.dce("div",null, "utItem");
+			var el = U.DCE("div",null, "utItem");
 			root.appendChild(el);
-			var btn = U.dce("button");
+			var btn = U.DCE("button");
 			t.btn = btn;
 			btn.innerText = text;
 			el.appendChild(btn);
-			var res = U.dce("div", null, "utResult");
+			var res = U.DCE("div", null, "utResult");
 			res.innerText = "Untested";
 			t._res = res;
 			el.appendChild(res);
