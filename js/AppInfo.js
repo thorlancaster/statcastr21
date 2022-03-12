@@ -1,8 +1,8 @@
 class AppInfo{
 	static get COPYRIGHT(){
-		return "©2021 Thor Lancaster, all rights reserved"
+		return "©2022 Thor Lancaster, all rights reserved"
 	}
 	static get VERSION(){
-		return "2.0.0 Beta";
+		return "3.1.1 Tournament Edition";
 	}
 }

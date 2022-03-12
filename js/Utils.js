@@ -1,51 +1,128 @@
-class Utils{
+class Utils {
 	constructor() {
-
+		var t = this;
+		t.MOBILE_WIDTH_THRESHOLD = 600;
 	}
-	CLEAR(el){
+
+	CLEAR(el) {
 		while (el.firstChild) {
 			el.removeChild(el.lastChild);
 		}
 	}
-	DGE(n){
+
+	DGE(n) {
 		return document.getElementById(n);
 	}
-	DCE(tag, cls1, cls2, cls3, cls4){
+
+	DCE(tag, cls1, cls2, cls3, cls4) {
 		var rtn = document.createElement(tag);
 		var rtc = rtn.classList;
-		if(cls1) rtc.add(cls1);
-		if(cls2) rtc.add(cls2);
-		if(cls3) rtc.add(cls3);
-		if(cls4) rtc.add(cls4);
+		if (cls1) rtc.add(cls1);
+		if (cls2) rtc.add(cls2);
+		if (cls3) rtc.add(cls3);
+		if (cls4) rtc.add(cls4);
 		return rtn;
 	}
-	get DEFAULT_SERVER(){return "wss://localhost:7203"}
-	get TESTING_USERNAME(){return "testUser"}
-	get TESTING_PASSWORD(){return "testPass"}
+
+	get DEFAULT_SERVER() {
+		if(window.location.protocol.startsWith("http"))
+			return "wss://" + window.location.hostname + ":9001";
+		return "wss://localhost:7203"
+	}
+
+	get TESTING_USERNAME() {
+		return "testUser"
+	}
+
+	get TESTING_PASSWORD() {
+		return "testPass"
+	}
 
 	/**
 	 * Print a string using hex for undisplayable characters
 	 * @param dat String
 	 * @param alwaysHex true to print all characters as hex
 	 */
-	printStr(dat, alwaysHex){
+	printStr(dat, alwaysHex) {
+		if(!dat)
+			return "undefined";
 		var rtn = "";
-		for(var z = 0; z < dat.length; z++){
+		for (var z = 0; z < dat.length; z++) {
 			var c = dat[z];
-			if(!alwaysHex && (c >= 32 && c <= 127)) // Printable
+			if (!alwaysHex && (c >= 32 && c <= 127)) // Printable
 				rtn += String.fromCharCode(c);
-			else{
+			else {
 				var hex = c;
 				var high = 48 + ((hex & 0xF0) >> 4);
 				var low = 48 + ((hex & 0x0F) >> 0);
-				if(high > 57) high += (65 - 57 - 1);
-				if(low > 57) low += (65 - 57 - 1);
+				if (high > 57) high += (65 - 57 - 1);
+				if (low > 57) low += (65 - 57 - 1);
 				rtn += ('[' + String.fromCharCode(high) + String.fromCharCode(low) + "]");
 			}
 		}
 		return rtn;
 	}
+
+	/**
+	 * Convert a number (1, 2, 3) into an Ordinal (1st, 2nd, 3rd, etc);
+	 * @param num Input number
+	 * @param html True to use an HTML <sup> tag in the output
+	 */
+	getOrdinal(num, html) {
+		var last2 = num % 100;
+		var last = num % 10;
+		var ord = "th";
+		if ((last2 < 4 || last2 > 20)) {
+			if (last === 1) ord = "st";
+			if (last === 2) ord = "nd";
+			if (last === 3) ord = "rd";
+		}
+		if (html)
+			ord = "<sup>" + ord + "</sup>";
+		return num + ord;
+	}
+
+	uint8ToB64(arr) {
+		if (arr == null) return "";
+		var rtn = "";
+		for (var x = 0; x < arr.length; x++) {
+			rtn += String.fromCharCode(arr[x] & 0xFF);
+		}
+		return btoa(rtn);
+	}
+
+	b64ToUint8(b64) {
+		if (b64 == null) return [];
+		var str = atob(b64);
+		var rtn = [];
+		for (var x = 0; x < str.length; x++) {
+			rtn.push(str.charCodeAt(x));
+		}
+		return rtn;
+	}
+
+	isMobile() {
+		return window.innerWidth < this.MOBILE_WIDTH_THRESHOLD;
+	}
+
+	/**
+	 * Modify a URL parameter without reloading the page
+	 * @param {String} k Key
+	 * @param {String} v Value
+	 */
+	modifyURL(k, v) {
+		var url = new URL(location.href);
+		var params = url.searchParams;
+		params.set(k, v);
+		url.search = params.toString();
+		try{
+			history.replaceState("Statcastr", document.title, url.toString());
+		} catch(e){
+			console.error(e);
+		}
+	}
 }
+
 var U = new Utils();
 
 /*
@@ -71,7 +148,7 @@ var U = new Utils();
 
 /* eslint-disable strict */
 
-class MD5Class{
+class MD5Class {
 	/**
 	 * Add integers, wrapping at 2^32.
 	 * This uses 16-bit operations internally to work around bugs in interpreters.
@@ -96,18 +173,23 @@ class MD5Class{
 	bitRotateLeft(num, cnt) {
 		return (num << cnt) | (num >>> (32 - cnt))
 	}
+
 	md5cmn(q, a, b, x, s, t) {
 		return this.safeAdd(this.bitRotateLeft(this.safeAdd(this.safeAdd(a, q), this.safeAdd(x, t)), s), b)
 	}
+
 	md5ff(a, b, c, d, x, s, t) {
 		return this.md5cmn((b & c) | (~b & d), a, b, x, s, t)
 	}
+
 	md5gg(a, b, c, d, x, s, t) {
 		return this.md5cmn((b & d) | (c & ~d), a, b, x, s, t)
 	}
+
 	md5hh(a, b, c, d, x, s, t) {
 		return this.md5cmn(b ^ c ^ d, a, b, x, s, t)
 	}
+
 	md5ii(a, b, c, d, x, s, t) {
 		return this.md5cmn(c ^ (b | ~d), a, b, x, s, t)
 	}
@@ -225,21 +307,21 @@ class MD5Class{
 		var len = arr.length;
 		var word = 0;
 		var words = [];
-		for(var x = 0; x < len; x++){
+		for (var x = 0; x < len; x++) {
 			var dat = x < len ? arr[x] : 0;
-			word += (dat << (8*(x&3)));
-			if((x&3) === 3 || x === len - 1) {
+			word += (dat << (8 * (x & 3)));
+			if ((x & 3) === 3 || x === len - 1) {
 				words.push(word);
 				word = 0;
 			}
 		}
 		var binl = this.binlMD5(words, arr.length * 8);
-		var rtn = new Uint8Array(binl.length*4);
-		for(var x = 0; x < binl.length; x++){
-			rtn[x*4+3] = binl[x] >> 24;
-			rtn[x*4+2] = binl[x] >> 16;
-			rtn[x*4+1] = binl[x] >> 8;
-			rtn[x*4] = binl[x] >> 0;
+		var rtn = new Uint8Array(binl.length * 4);
+		for (var x = 0; x < binl.length; x++) {
+			rtn[x * 4 + 3] = binl[x] >> 24;
+			rtn[x * 4 + 2] = binl[x] >> 16;
+			rtn[x * 4 + 1] = binl[x] >> 8;
+			rtn[x * 4] = binl[x] >> 0;
 		}
 		return rtn;
 	}

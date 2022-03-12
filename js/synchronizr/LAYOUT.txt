@@ -1,0 +1,17 @@
+[0][0]: gameType ex: bbgame
+[0][1]: eventInfo
+	for [Team, Opponent]
+		Town, Mascot, Abbr, Image
+	Gender/Level
+	Location
+	StartTime
+	SpecialDesc
+
+[1][x]: Team Rosters
+	Each entry is [S=Starter][ID] [Name]
+
+[2][x]: Opponent Rosters [== above]
+
+[3][0]: Instant Clock
+
+[4][0]: Plays

@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
 	<title>Unit Tests</title>
 	<script>
 		// Minified from Loader.js
@@ -13,7 +14,7 @@
 
 	<script>
 		function ldrBeginLoad() {
-			var l = new Loader("../ico/favicon-192.png");
+			var l = new Loader("../resources/ico/favicon-192.png");
 			l.setCallback(initTests);
 			l.loadScripts([
 				"../js/Utils.js",
@@ -38,8 +39,6 @@
 		function initTests(){
 			var el = U.DCE("div");
 			el.id = "utRoot";
-			el.style.width = "26em";
-			el.style.margin = "auto";
 			document.body.appendChild(el);
 			var t1 = new TestSynchronizrDiff(el, "Synchronizr Diff");
 			var t2 = new TestSynchronizrTXRX(el, "Synchronizr TX/RX");

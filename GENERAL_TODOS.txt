@@ -1,0 +1,21 @@
+### General TODOs file ###
+# List of features / fixes planned for a future update, but not localized or urgent
+
+
+Synchronizr - When admin connects, do a hash-based connection start (Reduce self, fans data usage)
+Synchronizr - When a fan reconnects, do a hash-based connection restart (For Data Reduction)
+Team manager - Database of teams and rosters
+Allow roster submission without specifying starters - just don't allow plays without starters
+Emergency substitutions - allow ad-hoc creation of new players
+Substitutions - non-modal substitution dialog
+Views - Constructor takes parameter that adapts layout for narrow screens
+
+LSD - Show events from the past 3 days by default
+LSD - Autosave events periodically or on command
+
+LSD - TODO - Editing the rosters after the game starts causes errors.
+	Removal in particular causes an '17 OOB bytecode' error at the server
+	Everything else is working fine
+
+
+LSD - TODO - When a server error occurs, stop trying to reconnect. Ex. Login errors.

@@ -1,3 +1,5 @@
+// noinspection JSSuspiciousNameCombination
+
 class UIPanel {
 	constructor() {
 		this.element = U.DCE("div", "uiPanel");
@@ -197,10 +199,8 @@ class EditTextField extends UIPanel{
 	}
 }
 
-
-// TODO Class has high technical debt
+// TODO we need a SimpleButtonField with less weight
 class ButtonField extends UIPanel {
-	// TODO all the extra functionality should go into ButtonField++ or something
 	constructor(btnText, fullSize, useHtml) {
 		super();
 		var t = this;
@@ -272,6 +272,12 @@ class ButtonField extends UIPanel {
 		});
 		t.enabled = true;
 	}
+
+	setButtonStyle(name, value){
+		this.btn.style[name] = value;
+		return this;
+	}
+
 	LCMCancel(){ // Long Click - Mouse - Cancel
 		var t = this;
 		if (t.mouseTmr) clearTimeout(t.mouseTmr); t.mouseTmr = 0;
@@ -424,6 +430,7 @@ class Dialog{
 		var t = this;
 		t.panel = new UIPanel().addClass("dialog"); // Covers the page
 		t.panel.setStyle("position", "fixed").setStyles("width", "height", "100%")
+			.setStyle("top", "0")
 			.setStyle("fontSize", "1.0em")
 			.setStyle("background", "var(--semitransparent-bg)")
 			.setStyle("display", "flex")
@@ -464,6 +471,9 @@ class Dialog{
 	appendChild(el){this.body.appendChild(el);}
 	prependChild(el){this.body.prependChild(el);}
 	removeChild(el){this.body.removeChild(el);}
+	setCloseEnabled(n){
+		this.closeBtn.setEnabled(n);
+	}
 	close(){
 		var t = this;
 		var res = t.onClose ? t.onClose() : null;
@@ -760,7 +770,6 @@ class NumberField extends UIPanel{
 			}
 		} else if(!spChars && snum === "P"){
 			sa=1;sb=1;sc=0;sd=0;se=1;sf=1;sg=1;
-			// TODO ALl but the last semicolons were commas, if it bugs it
 		}
 		// Draw the lit segments
 		if(sa) ctx.fillRect(xpos, ypos, nw, sw);
@@ -806,8 +815,8 @@ class PreferencesField extends UIPanel {
 				var ren = renameFn(k);
 				if (ren) {
 					var val = obj[k];
-					// TODO commented out the below line because it appears meaningless
-					// if (val == undefined) val == "";
+					if (val == null)
+						val = "";
 					t.ctrls.push(t.addRow(ren, val));
 					t.keys.push(k);
 				}
@@ -832,13 +841,6 @@ class PreferencesField extends UIPanel {
 		t.setRow(t.getLength(), [k, vObj], false);
 		return vObj;
 	}
-	/**
-	 * @returns False if there are any errors, True otherwise
-	 * // TODO should probably be validation here
-	 */
-	isValid() {
-		return true;
-	}
 	getState() {
 		var t = this, rtn = {};
 		for (var x = 0; x < t.keys.length; x++) {
@@ -847,6 +849,9 @@ class PreferencesField extends UIPanel {
 			rtn[k] = vObj.getValue();
 		}
 		return rtn;
+	}
+	isValid(){
+		return true; // Preferences fields with no validation are valid by default
 	}
 }
 
@@ -869,7 +874,7 @@ class ProgressBarField extends TextField{
 	}
 	style(){
 		this.setStyle("background", "linear-gradient(90deg, "+this.color1+" "+
-			(this.progress-0.5)+"%, "+this.color2+" "+(this.progress+0.5)+"%)");
+			(this.progress-0.05)+"%, "+this.color2+" "+(this.progress+0.05)+"%)");
 	}
 	addClickListener(f){
 		this.element.addEventListener("click", f);
@@ -1096,6 +1101,11 @@ class TableField extends UIPanel {
 		while (this.getLength() > l) {
 			t.removeChild(t.lastChild);
 		}
+	}
+
+	/** Clears the entire table */
+	clear(){
+		this.truncate(0);
 	}
 }
 
@@ -1465,8 +1475,8 @@ class TabSelectorMobile extends UIPanel {
 			t.dropdown.setStyle("borderTop", "1px solid #000");
 			var itms = t.tsMain.items;
 			for (var x = 0; x < itms.length; x++) {
-				if(!itms[x].isDisplayable())
-					continue;
+				// if(!itms[x].isDisplayable())
+				// 	continue;
 				var ts = new TabSelectorItem(itms[x].getHtml(), itms[x].getName(), this)
 					.setStyle("width", "100%")
 					.setStyle("justifyContent", "left")
@@ -1506,6 +1516,11 @@ class TabSelectorItem extends TextField {
 	isSelected() {
 		return this.hasClass("selected");
 	}
+
+	/**
+	 * @Deprecated
+	 * @returns {boolean} Whether the element should be displayed on the screen
+	 */
 	isDisplayable(){
 		return this.element.style.display !== "none";
 	}

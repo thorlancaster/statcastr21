@@ -6,19 +6,60 @@ class GameModel {
 		this.PBP_CLASS = null;
 		this.gender = null;
 		this.location = null;
+		this.startTime = null;
 		this.desc = null;
 		this.type = null;
+		this.subStats = null; // Needs to be overridden by subclass
+	}
+
+	getSubStats(idx){
+		return this.subStats[idx];
 	}
 
 	clear(){
 		this.pbp.clear();
-		this.reloadFromPBP();
+		this.reloadFromPBP(); // Implemented by subclass
 	}
 
-	static parseSingleEvent(bytecode){
-		// TODO parse the bytecode
-		return {hAbbr: "FML", gAbbr: "FV", gender: "[GENDER]", startTime: "4:20 PM"}
+	reloadFromPBP(){
+		throw "Not Implemented";
 	}
+
+	static parseSingleEvent(bc) {
+		var rtn = {};
+		this._updSynEvtInfo(bc, rtn);
+		return rtn;
+	}
+
+	/**
+	 * 	Helper stub function to update event info.
+	 * 	Since event descriptor is common among all events, code is in the common superclass
+	 * 	@param dat Bytecode from synchronizr
+	 * 	@param obj Set the properties of the provided object
+	 */
+	static _updSynEvtInfo(dat, obj){
+		var t = obj;
+		if(!t.team)
+			t.team = {};
+		if(!t.opp)
+			t.opp = {};
+
+		var ptr = [0];
+		t.team.town = SynchronizrUtils.getString(dat, ptr, true);
+		t.team.name = SynchronizrUtils.getString(dat, ptr, true);
+		t.team.abbr = SynchronizrUtils.getString(dat, ptr, true);
+		t.team.image = SynchronizrUtils.getString(dat, ptr, true);
+		t.opp.town = SynchronizrUtils.getString(dat, ptr, true);
+		t.opp.name = SynchronizrUtils.getString(dat, ptr, true);
+		t.opp.abbr = SynchronizrUtils.getString(dat, ptr, true);
+		t.opp.image = SynchronizrUtils.getString(dat, ptr, true);
+
+		t.gender = SynchronizrUtils.getString(dat, ptr, true);
+		t.location = SynchronizrUtils.getString(dat, ptr, true);
+		t.startTime = SynchronizrUtils.getString(dat, ptr, true);
+		t.desc = SynchronizrUtils.getString(dat, ptr, true);
+	}
+
 
 	static getSportName(str){
 		switch(str){
@@ -28,118 +69,8 @@ class GameModel {
 				return "Volleyball";
 			case "bbgame":
 				return  "Basketball";
-		}
-	}
-
-	/**
-	* Parse an array of bytecode (Synchronizr.EVENT for PBP)
-	* and apply the result to this model.
-	* @param {Array} arrs Bytecode as Synchronizr.EVENT
-	* @param {Integer} limit How many plays to update (from end). 0 = all
-	*/
-	parsePBPBytecode(arrs, limit) {
-		var t = this;
-		var pls = t.pbp.plays;
-		var l = arrs.length;
-		var lower = limit == 0 ? 0 : l - limit;
-		for (var x = l - 1; x >= lower; x--) {
-			if (!pls[x])
-				pls[x] = new t.PBP_CLASS();
-			pls[x].fromByteArray(arrs[x]);
-		}
-		if (limit == 0 && pls.length > arrs.length) {
-			pls.length = arrs.length;
-		}
-	}
-	genPBPBytecode(limit) {
-		var t = this;
-		var rtn = [];
-		var pls = t.pbp.plays;
-		for (var x = 0; x < pls.length; x++) {
-			rtn[x] = pls[x].toByteArray();
-		}
-		return rtn;
-	}
-
-	parseDynamicBytecode(arrs) {
-		var t = this;
-		if (arrs[0])
-			t.clock.fromByteArray(arrs[0]);
-		var desc = arrs[1];
-		// TODO put game description on page
-	}
-
-	/**
-	 * Parse an array of bytecode (Synchronizr.STATIC for events)
-	 * and apply the result to this model. Data contains team names, game
-	 * description (tournaments etc.) and rosters.
-	 * @param {Array} arrs Bytecode as Synchronizr.STATIC
-	 */
-	parseStaticBytecode(arrs) {
-		var t = this;
-		var hasParsedStatic = t.hasParsedStatic;
-		t.hasParsedStatic = true;
-		// Parse the bytecode
-		var hTown = '', hMascot = '', hAbbr = '', hImg = '', gTown = '', gMascot = '', gAbbr = '', gImg = '', hPlyrs = [], gPlyrs = [];
-		t.location = ''; t.desc = ''; t.startTime = ''; t.gender = '';
-		var ptr = [0];
-		// t.type = Synchronizr.byteArrToStr(arrs[0]);
-		// Type is no longer inferred from the stream. It is set directly by the subclass and not changed.
-		// If the stream's type changes, the entire model must be reloaded. Classes are not compatible.
-		try {
-			hTown = Synchronizr.byteArrToStr(Synchronizr.parseField(arrs[1], ptr));
-			hMascot = Synchronizr.byteArrToStr(Synchronizr.parseField(arrs[1], ptr));
-			hAbbr = Synchronizr.byteArrToStr(Synchronizr.parseField(arrs[1], ptr));
-			hImg = Synchronizr.byteArrToStr(Synchronizr.parseField(arrs[1], ptr));
-			ptr[0] = 0;
-			gTown = Synchronizr.byteArrToStr(Synchronizr.parseField(arrs[2], ptr));
-			gMascot = Synchronizr.byteArrToStr(Synchronizr.parseField(arrs[2], ptr));
-			gAbbr = Synchronizr.byteArrToStr(Synchronizr.parseField(arrs[2], ptr));
-			gImg = Synchronizr.byteArrToStr(Synchronizr.parseField(arrs[2], ptr));
-
-			t.location = Synchronizr.byteArrToStr(arrs[3]);
-			t.desc = Synchronizr.byteArrToStr(arrs[4]);
-			t.startTime = Synchronizr.byteArrToStr(arrs[5]);
-			t.gender = Synchronizr.byteArrToStr(arrs[6]);
-
-			ptr[0] = 0;
-			while (true) {
-				var s = Synchronizr.byteArrToStr(Synchronizr.parseField(arrs[8], ptr));
-				if (s) hPlyrs.push(s); else break;
-			}
-			ptr[0] = 0;
-			while (true) {
-				var s = Synchronizr.byteArrToStr(Synchronizr.parseField(arrs[9], ptr));
-				if (s) gPlyrs.push(s); else break;
-			}
-			t.rpcStr = Synchronizr.byteArrToStr(arrs[10]);
-		} catch (e) {
-			console.warn("Error parsing static bytecode, using default values for remaining");
-		}
-		// Apply the results
-
-		t.team.town = hTown;
-		t.team.name = hMascot;
-		t.team.abbr = hAbbr;
-		t.team.image = hImg;
-		t.opp.town = gTown;
-		t.opp.name = gMascot;
-		t.opp.abbr = gAbbr;
-		t.opp.image = gImg;
-
-		t.team.setPlayers(hPlyrs);
-		t.opp.setPlayers(gPlyrs);
-
-		// console.log(type, { hTown, hMascot, hAbbr }, { gTown, gMascot, gAbbr }, location, desc, startTime, gender, hPlyrs, gPlyrs);
-		// debugger;
-
-		if(hasParsedStatic){ // Only call RPC if it happens during the event, not on load
-			if(t.rpcStr && t.rpcStr != t.oldRpc){
-				var cmd = t.rpcStr.substring(t.rpcStr.indexOf('-') + 1);
-				BUS.publish(new MBMessage("upd", "rpc", cmd));
-			}
-		} else {
-			t.oldRpc = t.rpcStr;
+			default:
+				return str;
 		}
 	}
 
@@ -170,18 +101,18 @@ class GameModel {
 	putEditData(obj) {
 		var t = this;
 		if (!obj) return;
-		if (obj.hTown != undefined) t.team.town = obj.hTown;
-		if (obj.hName != undefined) t.team.name = obj.hName;
-		if (obj.hAbbr != undefined) t.team.abbr = obj.hAbbr;
-		if (obj.hImg != undefined) t.team.image = obj.hImg;
-		if (obj.gTown != undefined) t.opp.town = obj.gTown;
-		if (obj.gName != undefined) t.opp.name = obj.gName;
-		if (obj.gAbbr != undefined) t.opp.abbr = obj.gAbbr;
-		if (obj.gImg != undefined) t.opp.image = obj.gImg;
-		if (obj.gender != undefined) t.gender = obj.gender;
-		if (obj.location != undefined) t.location = obj.location;
-		if (obj.startTime != undefined) t.startTime = obj.startTime;
-		if (obj.desc != undefined) t.desc = obj.desc;
+		if (!!obj.hTown) t.team.town = obj.hTown;
+		if (!!obj.hName) t.team.name = obj.hName;
+		if (!!obj.hAbbr) t.team.abbr = obj.hAbbr;
+		if (!!obj.hImg) t.team.image = obj.hImg;
+		if (!!obj.gTown) t.opp.town = obj.gTown;
+		if (!!obj.gName) t.opp.name = obj.gName;
+		if (!!obj.gAbbr) t.opp.abbr = obj.gAbbr;
+		if (!!obj.gImg) t.opp.image = obj.gImg;
+		if (!!obj.gender) t.gender = obj.gender;
+		if (!!obj.location) t.location = obj.location;
+		if (!!obj.startTime) t.startTime = obj.startTime;
+		if (!!obj.desc) t.desc = obj.desc;
 	}
 
 	editDataRenameFunction(name) {
@@ -200,125 +131,6 @@ class GameModel {
 			case "desc": return "Special Desc.";
 		}
 		return name;
-	}
-
-	setRPC(cmd){
-		var rand = (""+Math.random()).substring(2);
-		this.rpcStr = rand + "-" + cmd;
-		this.invalidateStatic();
-	}
-
-	genEventBytecode() {
-		var t = this;
-		var rtn = [];
-		rtn[0] = Synchronizr.strToByteArr(t.type);
-		rtn[1] = t.genEventBytecode0(t.team);
-		rtn[2] = t.genEventBytecode0(t.opp);
-		rtn[3] = Synchronizr.strToByteArr(t.location);
-		rtn[4] = Synchronizr.strToByteArr(t.desc);
-		rtn[5] = Synchronizr.strToByteArr(t.startTime);
-		rtn[6] = Synchronizr.strToByteArr(t.gender);
-		rtn[7] = [];
-		rtn[8] = t.genRosterBytecode0(t.team);
-		rtn[9] = t.genRosterBytecode0(t.opp);
-		rtn[10] = Synchronizr.strToByteArr(t.rpcStr);
-		return rtn;
-	}
-	genRosterBytecode0(team) {
-		var len = 0;
-		for (var x in team.players) {
-			var ply = team.players[x];
-			var sta = team.starters.includes(ply.id);
-			len += ("" + ply.id).length;
-			len += ply.name.length + 1 + 2 + (sta ? 1 : 0);
-		}
-		var rtn = new Uint8Array(len);
-		var ptr = 0;
-		for (var x in team.players) {
-			var ply = team.players[x];
-			var sta = team.starters.includes(ply.id);
-			var itm = Synchronizr.strToByteArr((sta ? "S" : "") + ply.id + " " + ply.name);
-			rtn[ptr++] = itm.length >> 8;
-			rtn[ptr++] = itm.length & 0xFF;
-			Synchronizr.memcpy(rtn, itm, ptr, itm.length);
-			ptr += itm.length;
-		}
-		return rtn;
-	}
-	genEventBytecode0(team) {
-		var town = Synchronizr.strToByteArr(team.town);
-		var name = Synchronizr.strToByteArr(team.name);
-		var abbr = Synchronizr.strToByteArr(team.abbr);
-		var img = Synchronizr.strToByteArr(team.image);
-		return Synchronizr.joinArrs([town, name, abbr, img]);
-	}
-
-	genDynamicBytecode() {
-		return [this.clock.toByteArray(), new Uint8Array(0)];
-		// TODO second element is message to fans
-	}
-
-	/* Stuff for Synchronizr compatibliity */
-	getStaticData() {
-		this.synSInvalid = false;
-		return this.genEventBytecode();
-	}
-	getDynamicData() {
-		this.synDInvalid = false;
-		return this.genDynamicBytecode();
-	}
-	getEventData() {
-		var e = this.synEInvalid;
-		this.synEInvalid = false;
-		return this.genPBPBytecode(e);
-	}
-	isStaticInvalid() {
-		return this.synSInvalid;
-	}
-	isDynamicInvalid() {
-		return this.synDInvalid;
-	}
-	isEventInvalid() {
-		return this.synEInvalid;
-	}
-	invalidateStatic() {
-		this.synSInvalid = true;
-	}
-	invalidateDynamic() {
-		this.synDInvalid = true;
-	}
-	invalidateEvent(e) {
-		if (e == null)
-			e = true;
-		var t = this;
-		if (e === true)
-			t.synEInvalid = e;
-		else if (t.synEInvalid !== true) {
-			t.synEInvalid |= 0;
-			t.synEInvalid += e;
-		}
-	}
-	revalidateStatic() {
-		this.synSInvalid = false;
-	}
-	revalidateDynamic() {
-		this.synDInvalid = false;
-	}
-	revalidateEvent(e) {
-		this.synEInvalid = false;
-	}
-	updateStaticData(d) {
-		// Set the rosters, names, etc.
-		this.parseStaticBytecode(d);
-	}
-	updateDynamicData(d) {
-		// set the clock, etc from d
-		this.parseDynamicBytecode(d);
-	}
-	updateEventData(d, n) {
-		// Set the last n PBPs from the last n of d
-		if (!n) n = 0;
-		this.parsePBPBytecode(d, n);
 	}
 }
 
@@ -347,7 +159,7 @@ class PlayByPlay {
 	}
 	/**
 	 * Get plays from this list. If args is null, returns the n most recent plays, sorted by recency (most recent = index 0)
-	 * @param {Integer} length Maximum number of plays to return
+	 * @param {Number} length Maximum number of plays to return
 	 * @param {Object} args Filter that plays must match to be returned
 	 * @returns an Array where the first item is an array of plays and the second item is an array of indices
 	 */
@@ -369,7 +181,7 @@ class PlayByPlay {
 					rtn.push(play);
 					idxs.push(x);
 				}
-				if (length > 0 && rtn.length == length)
+				if (length > 0 && rtn.length === length)
 					break;
 			}
 			return [rtn, idxs];
@@ -378,7 +190,7 @@ class PlayByPlay {
 			for (var x = t.plays.length-1; x >= 0; x--) {
 				rtn.unshift(t.plays[x]);
 				idxs.unshift(x);
-				if (rtn.length == length)
+				if (rtn.length === length)
 					return [rtn, idxs];
 			}
 			return [rtn, idxs];
@@ -407,7 +219,7 @@ class PBPItem {
 		t.team = team;
 		t.rTeamScore = 0; // Running team and Opponent scores after this play
 		t.rOppScore = 0; // These are to be computed by sport-specific Game Models
-		t.linked = false;
+		t.linked = false; // True if this play is linked to previous play
 	}
 	getTime() {
 		return {
@@ -419,11 +231,11 @@ class PBPItem {
 
 	/**
 	* Set whether this play is linked to the last one
-	* @param linked true if this was created at the same time as the last one.
+	* @param l true if this was created at the same time as the last one.
 	*     Used by Admin for keeping track of undo, not serialized or stored persistently
 	*/
-	setLinked(linked) {
-		this.linked = (linked == true);
+	setLinked(l) {
+		this.linked = l;
 	}
 	getTimeStr() {
 		var t = this.getTime();
@@ -454,21 +266,40 @@ class Team {
 		t.lastPlayTime.ms = 0;
 	}
 
-	/**
-	 * Get the path
-	 */
-	getImagePath() {
-		var i = this.image;
-		if (i && i.includes('/')) // Full path
-			return i;
-		return Constants.mascotPath + i;
+	getName(){
+		return this.name;
+	}
+	getTown(){
+		return this.town;
+	}
+	getAbbr(){
+		return this.abbr;
+	}
+	getImage(){
+		return this.image;
+	}
+	getImagePath(){
+		return "../resources/mascots/" + this.image;
+	}
+	getPlayers(){
+		return this.players;
 	}
 
+	/**
+	 * Set the starters for the game
+	 * @param starterArr Array of player ids of starting players
+	 */
+	setStarters(starterArr){
+		this.starters = starterArr;
+	}
 	addPlayer(p) {
 		this.players[p.id] = p;
 	}
 	removePlayer(p) {
 		this.players[p.id] = null;
+	}
+	removeAllPlayers(){
+		this.players.length = 0;
 	}
 	/**
 	 * Set this team's roster and starters
@@ -484,7 +315,7 @@ class Team {
 			var n = p.substring(i + 1);
 			var ply = new this.PLAYER_CLASS();
 			var st = false;
-			if (pid[0] == 'S') { st = true; pid = pid.substring(1); }
+			if (pid[0] === 'S') { st = true; pid = pid.substring(1); }
 			ply.id = pid;
 			ply.name = n;
 			ply.onCourt = true;
@@ -494,10 +325,11 @@ class Team {
 		}
 	}
 	copyRoster(srcTeam) {
-		assert(false, "Abstract Method");
+		throw "Abstract Method";
 	}
 	/**
-	 * Reset the state of this team to the beginning of the game
+	 * Reset the state of this team to the beginning of the game.
+	 * Useful for reloading from scratch
 	 */
 	reset() {
 		for (var p in this.players) {
@@ -517,7 +349,10 @@ class Team {
 		return rtn;
 	}
 
-	onCourt() { // Moved from BasketballTeam.js
+	/**
+	 * @returns {[]} Array of players who are currently playing
+	 */
+	onCourt() {
 		var rtn = [];
 		for (var x in this.players) {
 			if (this.players[x].onCourt)
@@ -526,6 +361,9 @@ class Team {
 		return rtn;
 	}
 
+	/**
+	 * @returns {[]} Array of Ids of players who are currently playing
+	 */
 	onCourtIds(){
 		var rtn = [];
 		var pls = this.onCourt();
@@ -537,18 +375,19 @@ class Team {
 	/**
 	 * @param {Array<PBPItem>} pbp Play-by-play array
 	 * @param {Boolean} whichTeam True for team, False for opponent
-	 * @returns The player on the court who has least recently played. A usefull heuristic for emergency substitutions.
+	 * @returns The player on the court who has least recently made a play.
+	 * A usefull heuristic for emergency substitutions.
 	 */
 	getLeastActive(pbp, whichTeam) {
 		var pls = [...this.onCourtIds()];
 		for(var x = pbp.length - 1; x >= 0; x--){
 			var play = pbp[x];
-			if(play.team == whichTeam){
+			if(play.team === whichTeam){
 				var idx = pls.indexOf(play.pid);
 				if(idx >= 0){
 					pls.splice(idx, 1);
 				}
-				if(pls.length == 1)
+				if(pls.length === 1)
 					break;
 			}
 		}
@@ -575,19 +414,17 @@ class Player {
 	}
 
 	/**
-	 * Return how long this player has been on the court, 
-	 * EXCLUDING the time that has elapsed from the most recent
-	 * play
+	 * Return a String used for displaying the player's name and number
+	 * @param HTMLTeam Pass True or False to wrap the string in a span signifying player's team
+	 * @returns Formatted string
 	 */
-	getPlayTime() {
-		return {
-			minutes: Math.floor(this.playMs / 60000),
-			seconds: Math.floor((this.playMs / 1000) % 60),
-			millis: this.playMs % 1000
-		};
-	}
-	getPlayTimeStr() {
-		var t = this.getPlayTime();
-		return "" + t.minutes + (t.seconds < 10 ? ":0" + t.seconds : ":" + t.seconds);
+	getStr(HTMLTeam){
+		var t = this;
+		var rtn = t.id ? ("#" + t.id + " " + t.name) : t.name;
+		if(HTMLTeam === true)
+			rtn = "<span class='scPlayerTeam'>" + rtn + "</span>";
+		if(HTMLTeam === false)
+			rtn = "<span class='scPlayerOpp'>" + rtn + "</span>";
+		return rtn;
 	}
 }

@@ -1,6 +1,6 @@
 class ViewerApp extends StatcastrGenericApp{
-	constructor(rootEl) {
-		super(rootEl);
+	constructor(rootEl, overrideServer) {
+		super(rootEl, overrideServer);
 	}
 
 	/**
@@ -9,9 +9,9 @@ class ViewerApp extends StatcastrGenericApp{
 	 */
 	start(eventId, view){
 		var t = this;
-		t.mgr = new SynchronizrManager();
+		t.syn.setTX(false);
 		if(eventId)
-			t.mgr.setEvent(eventId);
+			t.syn.setEvent(eventId);
 		var vs = t.viewSelector;
 		vs.addTab("<u>E</u>VENTS", "events");
 		vs.addTab("<u>S</u>COREBOARD", "scoreboard");
@@ -22,18 +22,37 @@ class ViewerApp extends StatcastrGenericApp{
 		// vs.addTab("S<u>C</u>ORING", "scoring");
 		// vs.addTab("SHOOTIN<u>G</u>", "shooting");
 		vs.addTab("<u>H</u>ELP", "help", true);
-		vs.addTab("<u>A</u>DMIN", "admin");
 		if(!eventId)
 			t.onViewSelected("events");
 		else if(view)
 			t.onViewSelected(view)
 		else
-			t.onViewSelected("scoreboard");
+			t.onViewSelected(t.preferences.defaultView);
 
 		t.applyPreferences();
 		t.startTickTimer();
+		// Credential will need to be re-enabled if I ever support locked events
+		// t.syn.setCredentials(t.credentials.username, t.credentials.password);
+		// (The above line is also needed for setEvent as well)
 		t.syn.connect();
 	}
+
+	/**
+	 * Set the event that the viewer is looking at
+	 * @param id ID of new event
+	 * @param changeURL True to change the ?event= param in the URL
+	 */
+	setEvent(id, changeURL){
+		var t = this;
+		if(changeURL)
+			U.modifyURL("event", id);
+		t.syn.setEvent(id);
+		t.syn.connect(false);
+		t.syn.send();
+		t.onViewSelected(t.preferences.defaultView);
+	}
+
+
 
 	startTickTimer(){
 		var t = this;
@@ -46,10 +65,18 @@ class ViewerApp extends StatcastrGenericApp{
 	}
 
 	tick(dtime){
-		if(this.model)
-			this.model.tick(dtime);
-		if(this.view)
-			this.view.tick(dtime);
+		var t = this;
+		var mTick = false; // Did anything change?
+		if(t.model)
+			mTick = t.model.tick(dtime);
+		if(t.view)
+			t.view.tick(dtime);
+
+		if(mTick){
+			t.view.update();
+			t.header.setStateFromModel(t.model);
+			t.header.update();
+		}
 	}
 
 	applyPreferences(){
@@ -64,37 +91,49 @@ class ViewerApp extends StatcastrGenericApp{
 		}
 		t.viewSelector.setSelectedClick(e);
 		t.createAndLoadView(e);
-	}
-
-	createAndLoadView(viewId){
-		var t = this;
-		if(t.view) // Remove existing view from the screen
-			t.view.delete();
-
-		switch(viewId){
-			case "events":
-				t.view = new EventListView(this);
-				break;
-			case "scoreboard":
-				t.view = new ScoreboardView(this);
-				break;
-			case "teamStats":
-				break;
-			case "opponentStats":
-				break;
-			case "plays":
-				break;
-			case "help":
-				break;
-			case "admin":
-				alert("Go away Brett");
-				break;
+		if(e !== "help" && e !== "events") {
+			t.preferences.defaultView = e;
+			t.preferences.save();
 		}
-		t.viewContainer.appendChild(t.view);
 	}
 
-	_synReceive(data) { // After Synchronizr data received
-		console.log("ViewerApp SynchronizrReceive", data);
+	/**
+	 * Internal callback for when SynchronizrManager receives
+	 * @param syn Synchronizr object
+	 * @param chgs Changes array from Synchronizr
+	 * @param newStatus New Synchronizr status
+	 * @private
+	 */
+	_synReceive(syn, chgs, newStatus) { // After Synchronizr data received
+		var t = this;
+		if(newStatus) {
+			if(newStatus === ReliableChannel.STATUS_LOST){
+				if(!t.connFail)
+					new Toast("Connection Lost");
+				t.connFail = true;
+
+				// If there is a fatal error in the synchronizr, don't try and reconnect.
+				if(!t.syn.hasFatalError()){
+					t.reconnTimeout = setTimeout(function(){
+						t.syn.connect();
+					}, 3000);
+				} else {
+					console.warn("ViewerApp Not reconnecting the SynchronizrManager due to fatal error");
+				}
+			}
+			if(newStatus === ReliableChannel.STATUS_CONNECTED){
+				clearTimeout(t.reconnTimeout);
+				t.connFail = false;
+				new Toast("Connected to " + t.syn.getServer());
+			}
+		}
+
+		if(chgs) {
+			t.model.updateFromSynchronizr(t.syn, chgs);
+			t.view.update();
+			t.header.setStateFromModel(t.model);
+			t.header.update();
+		}
 	}
 
 	_synInfo(data) { // After SynchronizrManager data received
@@ -107,7 +146,7 @@ class ViewerApp extends StatcastrGenericApp{
 				// TODO reply if necessary
 			case 233: // Query All Events response
 				if(t.view.updateEventList)
-					t.view.updateEventList(data.data);
+					t.view.updateEventList(SynchronizrUtils.parseEventQueryResponse(data.data));
 				break;
 			case 230: // Admin joined
 				break;
@@ -117,6 +156,10 @@ class ViewerApp extends StatcastrGenericApp{
 				break;
 
 		}
+	}
+
+	_synError(errNum, errCode, errAdvice, errFix) {
+		var t = this;
 	}
 
 	showHelpDialog(){
@@ -145,7 +188,7 @@ class ViewerApp extends StatcastrGenericApp{
 
 	showAboutDialog(){
 		var d = new Dialog("About Statcastr");
-		d.appendChild(new ImageField("../ico/favicon-192.png").setStyle("height", "5em"));
+		d.appendChild(new ImageField("../resources/ico/favicon-192.png").setStyle("height", "5em"));
 		d.appendChild(new TextField("Statcastr version " + AppInfo.VERSION + "<br/>" + AppInfo.COPYRIGHT +
 			"<br/>", true).setStyle("whiteSpace", "initial"));
 		d.show();
@@ -180,23 +223,23 @@ class ViewerApp extends StatcastrGenericApp{
 		d.show();
 	}
 
-	showCredentialsDialog(){
-		var t = this;
-		var d = new Dialog("Credentials");
-		var prefs = new PreferencesField(t.credentials);
-		d.appendChild(prefs);
-		var submitBtn = new ButtonField("Submit");
-		submitBtn.addClickListener(function () {
-			if (!prefs.isValid()) {
-				new Toast("Invalid values");
-				return;
-			}
-			d.close();
-			t.credentials.setFrom(prefs.getState());
-			t.credentials.save();
-			new Toast("Credentials saved");
-		});
-		d.appendChild(submitBtn);
-		d.show();
-	}
+	// showCredentialsDialog(){ // TODO XXX moved to StatcastrGenericApp
+	// 	var t = this;
+	// 	var d = new Dialog("Credentials");
+	// 	var prefs = new PreferencesField(t.credentials);
+	// 	d.appendChild(prefs);
+	// 	var submitBtn = new ButtonField("Submit");
+	// 	submitBtn.addClickListener(function () {
+	// 		if (!prefs.isValid()) {
+	// 			new Toast("Invalid values");
+	// 			return;
+	// 		}
+	// 		d.close();
+	// 		t.credentials.setFrom(prefs.getState());
+	// 		t.credentials.save();
+	// 		new Toast("Credentials saved");
+	// 	});
+	// 	d.appendChild(submitBtn);
+	// 	d.show();
+	// }
 }

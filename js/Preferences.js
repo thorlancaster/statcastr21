@@ -103,3 +103,16 @@ class CredentialsPreferencesClass extends PreferencesClass{
 //         t.events = null;
 //     }
 // }
+
+class SessionPreferences{
+    constructor() {
+    }
+    get(prop, defaultVal){
+        if(this[prop])
+            return this[prop];
+        return defaultVal;
+    }
+    set(prop, val){
+        this[prop] = val;
+    }
+}

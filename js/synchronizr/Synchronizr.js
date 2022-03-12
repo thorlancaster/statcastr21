@@ -1,168 +1,172 @@
 class SynchronizrUtils {
-	static load(id, data) {
-		data = [];
-		for (var x = 0; x < 256; x++)
-			data[x] = [];
-		console.warn("TODO load from LocalStorage");
+	static byteArrToStr(byteArr) {
+		var rtn = "";
+		for (var x = 0; x < byteArr.length; x++)
+			rtn += String.fromCharCode(byteArr[x]);
+		return rtn;
 	}
 
-	static save(id, data) {
-		console.warn("TODO load from LocalStorage");
+	/**
+	 * Push a Synchronizr-string or array to a buffer
+	 * @param buf Buffer to write to
+	 * @param str String or array to write
+	 * @param unprefixed If true, omit 2 byte length prefix
+	 */
+	static pushString(buf, str, unprefixed) {
+		var len = str.length;
+		if(!unprefixed){
+			buf.push((len >> 8) & 0xFF);
+			buf.push((len) & 0xFF);
+		}
+		if (typeof str === "string") {
+			for (var x = 0; x < str.length; x++)
+				buf.push(str.charCodeAt(x));
+		} else {
+			for (var x = 0; x < str.length; x++)
+				buf.push(str[x]);
+		}
+	}
+
+	/**
+	 * Get a Synchronizr-string or array from a buffer
+	 * @param buf Buffer to read from
+	 * @param {Array} idxPtr BY REFERENCE index in the buffer. If null, the whole buffer is converted
+	 * @param asString true to return result as String, false to return as Byte Array
+	 */
+	static getString(buf, idxPtr, asString) {
+		var ptr = 0;
+		var len = 0;
+		if(idxPtr) {
+			ptr = idxPtr[0];
+			len = (buf[ptr++] << 8) + buf[ptr++];
+			idxPtr[0] = ptr + len;
+		} else {
+			ptr = 0;
+			len = buf.length;
+		}
+		if (asString) {
+			var rtn = "";
+			for (var x = 0; x < len; x++) {
+				rtn += String.fromCharCode(buf[ptr++]);
+			}
+			return rtn;
+		} else {
+			var rtn = [];
+			for (var x = 0; x < len; x++) {
+				rtn.push(buf[ptr++]);
+			}
+			return rtn;
+		}
+	}
+
+	static decodeEventData(arr){
+		var arrPtr = [0];
+		var rtn = {};
+		rtn.teamTown = SynchronizrUtils.getString(arr, arrPtr, true);
+		rtn.teamMascot = SynchronizrUtils.getString(arr, arrPtr, true);
+		rtn.teamAbbr = SynchronizrUtils.getString(arr, arrPtr, true);
+		rtn.teamImage = SynchronizrUtils.getString(arr, arrPtr, true);
+
+		rtn.oppTown = SynchronizrUtils.getString(arr, arrPtr, true);
+		rtn.oppMascot = SynchronizrUtils.getString(arr, arrPtr, true);
+		rtn.oppAbbr = SynchronizrUtils.getString(arr, arrPtr, true);
+		rtn.oppImage = SynchronizrUtils.getString(arr, arrPtr, true);
+
+		rtn.gender = SynchronizrUtils.getString(arr, arrPtr, true);
+		rtn.location = SynchronizrUtils.getString(arr, arrPtr, true);
+		rtn.startTime = SynchronizrUtils.getString(arr, arrPtr, true);
+		rtn.specialDesc = SynchronizrUtils.getString(arr, arrPtr, true);
+
+		return rtn;
+	}
+
+	// Parse an event query response (from the server) into valid JS data
+	static parseEventQueryResponse(data) {
+		return data;
 	}
 }
 
 
-class SynchronizrOpsClass{
+class SynchronizrOpsClass {
 	constructor() {
 		var t = this;
-		// Constants - copied to SynchronizrManager.js
 		t.MODE_WRITE = 0; // Overwrite
-		t.MODE_INSERT = 1; // Insert _data, move other
-		t.MODE_DELETE = 2; // Delete _data, move other
-		t.MODE_APPEND = 3; // Add _data to end
+		t.MODE_INSERT = 1; // Insert data, move other
+		t.MODE_DELETE = 2; // Delete data, move other
+		t.MODE_APPEND = 3; // Add data to end
+		t.MODE_CLEAR = 4; // Clear all data from this subArray
 	}
 }
 
 /**
  * Class that holds Synchronizr functions common to both transmitter and receiver
  */
-class SynchronizrComFnsClass extends SynchronizrOpsClass{
+class SynchronizrComFnsClass extends SynchronizrOpsClass {
 	constructor(props) {
 		super(props);
+		var t = this;
+		t._modifiedLocal = []; // Set entries to true upon state modification, used for local receive handler
+		t._modifiedRemote = []; // Same as above, but for keeping track WRT remote state. True only.
 	}
-	/**
-	 * Load data in this synchronizr from local storage
-	 * using the specified eventId
-	 * If the event does not exist, data will be cleared
-	 * @param eventId Event ID
-	 */
-	load(eventId){
-		SynchronizrUtils.load(eventId, this._data);
+
+	getData() {
+		return this._data;
 	}
 
 	/**
-	 * Save data in this synchronizr to local storage
-	 * using the specified eventId
-	 * @param eventId Event ID
+	 * Serialize the state of this Synchronizr into a byte array
+	 * @returns {number[]}
 	 */
-	save(eventId){
-		SynchronizrUtils.save(eventId, this._data);
+	serialize() {
+		var rtn = [253, 255, 255, 255, 255]; // Inhale CHEECH CHEECH CHEECH CHEECH
+		for (var x = 0; x < 256; x++) {
+			var arrx = this._data[x];
+			if (arrx.length) {
+				rtn.push(251);
+				rtn.push(x);
+			}
+			for (var y = 0; y < arrx.length; y++) {
+				var arry = arrx[y];
+				if (!arry) arry = []; // Serialize undefined subarrays the sam as empty ones
+				var szY = arry.length;
+				rtn.push((szY >> 8) & 0xFF);
+				rtn.push(szY & 0xFF);
+				for (var z = 0; z < szY; z++) {
+					rtn.push(arry[z]);
+				}
+			}
+		}
+		return rtn;
+	}
+
+	/**
+	 * Deserialize the state of this Synchronizr from a byte array
+	 * @param bc Array from Serialize() or the server
+	 */
+	deserialize(bc) {
+		this.applyOpcodes2(bc, [], false);
+		for (var x = 0; x < 256; x++) {
+			this._modifiedLocal[x] = true;
+			this._modifiedRemote[x] = true;
+		}
 	}
 
 	/**
 	 * Pretty-print the state, for debugging
 	 */
-	printState(){
+	printState() {
 		console.log("--------Synchronizr--------")
-		for(var x = 0; x < 255; x++){
-			if(this._data[x].length > 0){
+		for (var x = 0; x < 255; x++) {
+			if (this._data[x].length > 0) {
 				console.log("[" + x + "]");
 				var dat = this._data[x];
-				for(var y = 0; y < dat.length; y++){
+				for (var y = 0; y < dat.length; y++) {
 					console.log("    [" + y + "]: " + U.printStr(dat[y]));
 				}
 			}
 		}
 		console.log("---------------------------")
 	}
-}
-
-
-/**
- * Synchronizer Receiver Class
- * This class is the Model in the MVC architecture of the fan side.
- * Incoming network _data should be passed into applyOpcodes()
- * and the receive handler (set by setReceiveHandler()) will automatically
- * be called as described below.
- */
-class SynchronizrReceiver extends SynchronizrComFnsClass{
-	constructor() {
-		super();
-		var t = this;
-		t.reset();
-	}
-
-	isTransmitter(){return false}
-
-	getHashTarget(){
-		return this;
-	}
-
-	reset(){
-		var t = this;
-		t._data = []; // Up to 256 separate data arrays
-		t._arrNum = -1;
-		for (var x = 0; x < 256; x++)
-			t._data[x] = [];
-	}
-
-	resetReceiver(){
-		this.reset();
-	}
-
-	/**
-	 * ONLY CALL THIS FROM THE TRANSMITTER. Used for diff generation
-	 * @returns data
-	 */
-	getDataForTxUseOnly() {
-		return this._data;
-	}
-
-	/**
-	 * Retrieve data from this Synchronizr.
-	 * If either parameter is out of bounds, returns undefined
-	 * @param num ArrNum to retrieve from
-	 * @param idx Element in the above array.
-	 *  If omitted, returns the length
-	 * @returns {Uint8Array} data[num][idx]
-	 */
-	getData(num, idx) {
-		var t = this;
-		var arr = this._data[num];
-		if(idx === undefined)
-			return arr.length;
-		if(!arr)
-			return;
-		return arr[idx];
-	}
-
-	/**
-	 * Used to mark a modification array
-	 * Used by both transmitter and receiver
-	 * @param arr
-	 * @param num
-	 * @param append
-	 */
-	markModified2(arr, num, append) {
-		var val = arr[num];
-		if (val === true) // Can't get any more modified than fully
-			return;
-		if (typeof val === "number") {
-			if (append)
-				arr[num]++;
-			else
-				arr[num] = true;
-		} else {
-			if (!append)
-				arr[num] = true;
-		}
-	}
-
-	/**
-	 * Set the receive handler that will be called whenever new _data arrives.
-	 * This function will receive, as an argument, a sparse array.
-	 * Each entry in the array corresponds to one selected array.
-	 * Each entry will be either:
-	 * * A number, representing the number of elements that have been appended
-	 * * The value 'true', indicating that the entire sub-array needs reloaded
-	 * @param f Receive handler function
-	 * @param d Debug root object. Needed when Debuggr is in use
-	 */
-	setReceiveHandler(f, d) {
-		this._receiveHandler = f;
-		this._dbgRoot = d;
-	}
-
 
 	/**
 	 * Apply opcodes (see SynchronizrSyntax.txt) to this Synchronizr.
@@ -175,7 +179,7 @@ class SynchronizrReceiver extends SynchronizrComFnsClass{
 	 * @param pendingAfter [optional] If true, return a change array instead of calling receive handler
 	 * * PendingAfter will also be set to true on a bail.
 	 */
-	applyOpcodes(bytecode, changesFromLast, pendingAfter) {
+	applyOpcodes2(bytecode, changesFromLast, pendingAfter) {
 		var t = this;
 		var changes = changesFromLast ? changesFromLast : [];
 		var ptr = -2;
@@ -199,7 +203,7 @@ class SynchronizrReceiver extends SynchronizrComFnsClass{
 		var readArrAccesses = [];
 		while (ptr < bytecode.length) {
 			var op = bytecode[ptr++];
-			if(ptr === -1) op = 251; // Inject an opcode to SET ARRAY
+			if (ptr === -1) op = 251; // Inject an opcode to SET ARRAY
 			let startRun, endRun;
 			switch (op) {
 				case 250: // BAIL, write everything not read from readArr to the end
@@ -217,7 +221,7 @@ class SynchronizrReceiver extends SynchronizrComFnsClass{
 					}
 					changeType = changes[arrNum] | 0;
 					arrNum = bytecode[ptr++]; // Grab new
-					if(ptr === 0) arrNum = t._arrNum; // Inject an argument for the SET ARRAY opcode
+					if (ptr === 0) arrNum = t._arrNum; // Inject an argument for the SET ARRAY opcode
 					t._arrNum = arrNum;
 					readArr = t._data[arrNum]; // Assign new
 					readArrAccesses = [];
@@ -227,9 +231,9 @@ class SynchronizrReceiver extends SynchronizrComFnsClass{
 					startRun = 0;
 					endRun = readArr.length - 1;
 					endLastRun = endRun;
-					if(seenOpAfterSet)
+					if (seenOpAfterSet)
 						changeType = true;
-					if(writeArr === undefined) writeArr = [];
+					if (writeArr === undefined) writeArr = [];
 					for (let x = startRun; x <= endRun; x++) {
 						writeArr.push(readArr[x]);
 						readArrAccesses[x] = true;
@@ -319,21 +323,125 @@ class SynchronizrReceiver extends SynchronizrComFnsClass{
 			return changes;
 		} else { // If no more packets are coming...
 			if (t._receiveHandler) // If any receive handler is specified, call it with the changes
-				if(window.DEBUGGR)
+				if (window.DEBUGGR)
 					DEBUGGR.invokeProtected(t._receiveHandler, t._dbgRoot, changes);
 				else
 					t._receiveHandler(changes);
 		}
-
-// Call bowl clear handler after everything else is done
-		// TODO bowl clear handler should set all non-zero arrNums as changed
-		//  in the changes array
-		// TODO there shouldn't be a bowl clear handler
-		// if (bowlCleared && t._bowlClearHandler)
-		// 	t._bowlClearHandler();
-
 		return changes;
 	}
+
+	clearData(){
+		for (var x = 0; x < 256; x++) {
+			this._data[x] = [];
+		}
+	}
+}
+
+
+/**
+ * Synchronizer Receiver Class
+ * This class is the Model in the MVC architecture of the fan side.
+ * Incoming network data should be passed into applyOpcodes()
+ * and the receive handler (set by setReceiveHandler()) will automatically
+ * be called as described below.
+ */
+class SynchronizrReceiver extends SynchronizrComFnsClass {
+	constructor(data) {
+		super();
+		var t = this;
+		t.reset();
+		if (data)
+			t._data = data;
+	}
+
+	isTransmitter() {
+		return false
+	}
+
+	getHashTarget() {
+		return this;
+	}
+
+	reset() {
+		var t = this;
+		t._data = []; // Up to 256 separate data arrays
+		t._arrNum = -1;
+		for (var x = 0; x < 256; x++)
+			t._data[x] = [];
+	}
+
+	resetReceiver() {
+		this.reset();
+	}
+
+	applyOpcodes(bytecode, changesFromLast, pendingAfter) {
+		this.applyOpcodes2(bytecode, changesFromLast, pendingAfter);
+	}
+
+	/**
+	 * Retrieve data from this Synchronizr.
+	 * If either parameter is out of bounds, returns undefined
+	 * If called with no arguments, returns the data array
+	 * @param num ArrNum to retrieve from
+	 * @param idx Element in the above array.
+	 *  If omitted, returns the length
+	 * @returns {Uint8Array} data[num][idx]
+	 */
+	getData(num, idx) {
+		if (num == null && idx == null)
+			return this._data;
+		var t = this;
+		var arr = this._data[num];
+		if (idx === undefined)
+			return arr.length;
+		if (!arr)
+			return;
+		return arr[idx];
+	}
+
+	/**
+	 * Used to mark a modification array
+	 * Used by both transmitter and receiver
+	 * @param arr
+	 * @param num
+	 * @param append
+	 */
+	markModified2(arr, num, append) {
+		var val = arr[num];
+		if (val === true) // Can't get any more modified than fully
+			return;
+		if (val == null) {
+			if (append)
+				arr[num] = 1;
+			else
+				arr[num] = true;
+		} else if (typeof val === "number") {
+			if (append)
+				arr[num]++;
+			else
+				arr[num] = true;
+		} else {
+			if (!append)
+				arr[num] = true;
+		}
+	}
+
+	/**
+	 * Set the receive handler that will be called whenever new _data arrives.
+	 * This function will receive, as an argument, a sparse array.
+	 * Each entry in the array corresponds to one selected array.
+	 * Each entry will be either:
+	 * * A number, representing the number of elements that have been appended
+	 * * The value 'true', indicating that the entire sub-array needs reloaded
+	 * @param f Receive handler function
+	 * @param d Debug root object. Needed when Debuggr is in use
+	 */
+	setReceiveHandler(f, d) {
+		this._receiveHandler = f;
+		this._dbgRoot = d;
+	}
+
 }
 
 
@@ -341,29 +449,40 @@ class SynchronizrReceiver extends SynchronizrComFnsClass{
  * Synchronizr Transmitter class.
  * This class is the Model in the MVC architecture of the admin side.
  * Model is updated by calling setData
- * Changes are pushed to the view by calling sendLocal()
+ * Changes are pushed to the view by calling updateLocal()
  * Packets are generated for the network by calling sendRemote(MTU)
  *     MTU - Maximum amount of data to send at once.
  * SendRemote() sends the highest priority changes first
+ * @param data Use data from an old Synchronizer instance. Pass this if reconnecting
  */
-class SynchronizrTransmitter extends SynchronizrComFnsClass{
-	constructor() {
+class SynchronizrTransmitter extends SynchronizrComFnsClass {
+	constructor(data) {
 		super();
 		var t = this;
-		t._safeMode = 0; // Safe mode simplfies the output to try and suppress bugs
-		t._data = []; // Current local state
-		t._modifiedLocal = []; // Set entries to true upon state modification, used for local receive handler
-		t._modifiedRemote = []; // Same as above, but for keeping track WRT remote state. True only.
-		t._rx = new SynchronizrReceiver(); // Dummy receiver for keeping track of what has changed
-		for (var x = 0; x < 256; x++) {
-			t._data[x] = [];
+		t._safeMode = 0; // Safe mode simplfies the output to try and suppress bugs. Consumes more data
+		if (data) {
+			t._data = data;
+			for (var x = 0; x < 256; x++) {
+				if (data[x] && data[x].length) {
+					t._modifiedRemote[x] = true;
+					t._modifiedLocal[x] = true;
+				}
+			}
+		} else {
+			t._data = []; // Initialize Current local state
+			for (var x = 0; x < 256; x++) {
+				t._data[x] = [];
+			}
 		}
+		t._rx = new SynchronizrReceiver(); // Dummy receiver for keeping track of what has changed
 	}
 
 
-	isTransmitter(){return true}
+	isTransmitter() {
+		return true
+	}
 
-	getHashTarget(){
+	getHashTarget() {
 		return this._rx;
 	}
 
@@ -398,35 +517,64 @@ class SynchronizrTransmitter extends SynchronizrComFnsClass{
 	/**
 	 * Write data to the internal buffer and queue it for sending.
 	 * After this function has been called one or more times,
-	 * call sendLocal() to call the receive handler
+	 * call updateLocal() to call the receive handler
 	 * and sendRemote() whenever the transmit channel is free
 	 * @param num Number of internal array to write to
-	 * @param idx Index in the array to write to
-	 * @param val Array or Uint8Array to write.
-	 * @param mode 0 for write, 1 for insert, 2 for delete, 3 for append
+	 * @param idx Index in the array to write to. -1 for delete removes last item.
+	 * @param val Array, Uint8Array, or String to write.
+	 * @param mode 0 for write, 1 for insert, 2 for delete, 3 for append, 4 for clear
 	 */
 	setData(num, idx, val, mode) {
 		var t = this;
+		if (typeof val === "string")
+			val = t.str2arr(val);
+		else if (Array.isArray(val))
+			val = new Uint8Array(val);
+		else if (!val instanceof Uint8Array)
+			throw "\'val\' is an invalid type";
+
 		switch (mode) {
 			case 0: // Write
-				t._data[num][idx] = new Uint8Array(val);
+				t._data[num][idx] = val;
 				t._markModified(num);
 				break;
 			case 1: // Insert
-				t._data[num].splice(idx, 0, new Uint8Array(val));
+				t._data[num].splice(idx, 0, val);
 				t._markModified(num);
 				break;
 			case 2: // Delete
-				t._data[num].splice(idx, 1);
+				if (idx === -1)
+					t._data[num].length--;
+				else
+					t._data[num].splice(idx, 1);
 				t._markModified(num);
 				break;
-			case 3: // Apppend
+			case 3: // Append
 				t._data[num].push(val);
 				t._markModified(num, true);
+				break;
+			case 4: // Clear
+				t._data[num].length = 0;
+				t._markModified(num);
 				break;
 			default:
 				throw "Invalid mode";
 		}
+	}
+
+	/**
+	 * Helper function to convert String to a Uint8Array
+	 * @param str Input String
+	 * @returns {Uint8Array}
+	 */
+	str2arr(str) {
+		if (!str) return;
+		var len = str.length;
+		var rtn = new Uint8Array(len);
+		for (var x = 0; x < len; x++) {
+			rtn[x] = (str.charCodeAt(x));
+		}
+		return rtn;
 	}
 
 	/**
@@ -459,7 +607,7 @@ class SynchronizrTransmitter extends SynchronizrComFnsClass{
 	 * (Right now it just calls clearBowl())
 	 * TODO support hash-based renegotation
 	 */
-	resetReceiver(){
+	resetReceiver() {
 		this.clearBowl();
 	}
 
@@ -468,9 +616,9 @@ class SynchronizrTransmitter extends SynchronizrComFnsClass{
 	 * Call this function after calling setData() to call the receive handler
 	 * and update the View
 	 */
-	sendLocal() {
+	updateLocal() {
 		if (this._receiveHandler) {
-			if(window.DEBUGGR){
+			if (window.DEBUGGR) {
 				DEBUGGR.invokeProtected(this._receiveHandler, this._dbgRoot, this._modifiedLocal)
 			} else
 				this._receiveHandler(this._modifiedLocal);
@@ -478,7 +626,7 @@ class SynchronizrTransmitter extends SynchronizrComFnsClass{
 		this._modifiedLocal = [];
 	}
 
-	applyOpcodes(){
+	applyOpcodes() {
 		throw "SynchronizrTransmitter does not accept opcodes";
 	}
 
@@ -510,14 +658,15 @@ class SynchronizrTransmitter extends SynchronizrComFnsClass{
 		for (var x = 0; x < 256; x++) {
 			if (t._modifiedRemote[x]) { // For each subArray, check if it needs re-synced
 				var tData = t._data[x];
-				var oData = t._rx.getDataForTxUseOnly()[x];
+				var oData = t._rx.getData()[x];
 				var eMtu = mtu - 2;
-				if(eMtu <= -2 || isNaN((eMtu))) eMtu = undefined;
+				if (eMtu <= -2 || isNaN((eMtu))) eMtu = undefined;
 				var diffBytecode = SynDiff.genDiffInfo(oData, tData, t._safeMode, eMtu);
 				if (mtu > 0 && currLen > 0 && currLen + 2 + diffBytecode.length > mtu)
 					break;
 				if (diffBytecode.length) { // Only push if there were changes
-					if(t._safeMode || rxArrNum !== x){
+					if (t._safeMode || rxArrNum !== x) {
+						// NOTE: there used to be an || true at the end because the arrNum would get out of sync
 						// Skip initial set of arrNum if it is already cached by the rx.
 						// If safe mode, always set arrNum
 						toker.push([251, x]); // Set arrNum
@@ -543,12 +692,12 @@ class SynchronizrTransmitter extends SynchronizrComFnsClass{
 		}
 		// Apply changes to internal receiver
 		t._rx.applyOpcodes(rtn);
-		if(prepend){
+		if (prepend) {
 			var rtn2 = new Uint8Array(rtn.length + prepend.length);
 			var ptr2 = 0;
-			for(var x = 0; x < prepend.length; x++)
+			for (var x = 0; x < prepend.length; x++)
 				rtn2[ptr2++] = prepend[x];
-			for(var x = 0; x < rtn.length; x++)
+			for (var x = 0; x < rtn.length; x++)
 				rtn2[ptr2++] = rtn[x];
 			return rtn2;
 		}
@@ -557,7 +706,7 @@ class SynchronizrTransmitter extends SynchronizrComFnsClass{
 }
 
 
-class SynchronizrHashr{
+class SynchronizrHashr {
 	/**
 	 * Calculate the hash of an event.
 	 * This hash IS NOT TO BE USED FOR ANYTHING SECURITY-RELATED WHATSOEVER.
@@ -568,15 +717,15 @@ class SynchronizrHashr{
 	 * @param len {Number} Number of bytes of hash to compute. Currently only 16 is supported.
 	 * @returns {Uint8Array} a 128-bit (16-byte) hash
 	 */
-	static hash(syn, len){
-		if(syn._data)
+	static hash(syn, len) {
+		if (syn._data)
 			syn = syn._data;
 		var blob = [];
-		for(var x = 0; x < syn.length; x++){
+		for (var x = 0; x < syn.length; x++) {
 			var arrx = syn[x];
-			for(var y = 0; y < arrx.length; y++){
+			for (var y = 0; y < arrx.length; y++) {
 				var arry = arrx[y];
-				for(var z = 0; z < arry.length; z++){
+				for (var z = 0; z < arry.length; z++) {
 					blob.push(arry[z]);
 				}
 				blob.push(0);
@@ -584,11 +733,12 @@ class SynchronizrHashr{
 			blob.push(0);
 		}
 		var rtn = SynchronizrHashr.hashBlob(blob);
-		if(rtn.length !== len)
+		if (rtn.length !== len)
 			throw "Only lengths of " + rtn.length + " supported";
 		return rtn;
 	}
-	static hashBlob(blob){
+
+	static hashBlob(blob) {
 		return MD5.bmd5(blob);
 	}
 }

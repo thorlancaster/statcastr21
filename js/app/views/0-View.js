@@ -6,7 +6,9 @@ class View extends UIPanel{
 		t.addClass("view");
 	}
 	delete(){
-		this.getElement().parentElement.removeChild(this.getElement());
+		var e = this.getElement();
+		if(e && e.parentElement)
+			e.parentElement.removeChild(e);
 	}
 	tick(){
 	}

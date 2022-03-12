@@ -53,10 +53,7 @@ class TestSynchronizrDiff extends UnitTest {
 	}
 
 	byteArrToStr(byteArr){
-		var rtn = "";
-		for(var x = 0; x < byteArr.length; x++)
-			rtn += String.fromCharCode(byteArr[x]);
-		return rtn;
+		return SynchronizrUtils.byteArrToStr(byteArr);
 	}
 
 	strArrToByteArrArr(strArr){

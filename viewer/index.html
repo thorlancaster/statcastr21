@@ -14,10 +14,11 @@
 	<script>
 		function initApp(){
 			var p = new URLSearchParams(window.location.search);
-			new ViewerApp(document.body).start(p.get("event"), p.get("view"));
+			window.APP = new ViewerApp(document.body, p.get("server"));
+			window.APP.start(p.get("event"), p.get("view"));
 		}
 		function ldrBeginLoad() {
-			var l = new Loader("../ico/favicon-192.png");
+			var l = new Loader("../resources/ico/favicon-192.png");
 			l.setCallback(initApp);
 			l.loadStyles([
 				"../css/main.css",
@@ -36,14 +37,13 @@
 				"../js/app/StatcastrGenericApp.js",
 				"../js/model/GameModel.js",
 				"../js/model/basketball/BasketballGameModel.js",
-				"../js/model/basketball/BasketballPBP.js",
-				"../js/model/basketball/BasketballPlayer.js",
-				"../js/model/basketball/BasketballPlayType.js",
-				"../js/model/basketball/BasketballSubStats.js",
-				"../js/model/basketball/BasketballTeam.js",
 				"../js/app/views/0-View.js",
+				"../js/app/views/1-ViewComponents.js",
 				"../js/app/views/EventListView.js",
 				"../js/app/views/ScoreboardView.js",
+				"../js/app/views/TeamStatsView.js",
+				"../js/app/views/PlayByPlayView.js",
+				"../js/app/plugins/SpiritSquad.js",
 				"ViewerApp.js"
 			]);
 			l.load();

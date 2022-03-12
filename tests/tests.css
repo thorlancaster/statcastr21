@@ -1,9 +1,15 @@
+#utRoot{
+    margin: auto;
+    padding-top: 1em;
+    width: 26em;
+}
+
 .utItem{
     font-size: 1.2em;
     display: flex;
     border: 1px solid #000;
-    margin: 0.5em;
-    font-family: "roboto", "sans-serif";
+    margin-bottom: 0.5em;
+    font-family: "roboto", sans-serif;
     justify-content: space-between;
 }
 

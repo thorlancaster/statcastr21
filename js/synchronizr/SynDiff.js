@@ -13,7 +13,6 @@ class SynDiff {
 	 * @param s True for safe mode, false for normal operation
 	 * @param mtu If specified, limits the output size to either one operation or the mtu,
 	 * whichever is larger. If omitted, an infinite MTU is used
-	 * TODO implement the above zzzipping level
 	 * @returns {Uint8Array}
 	 */
 	static genDiffInfo(o, n, s, mtu) {
@@ -51,7 +50,7 @@ class SynDiff {
 			return new Uint8Array([]); // In this case no changes need to be made
 
 		// The below for loop generates bytecode
-		// TODO based on the Zzzip level, further compress literals
+		// TODO Further compress literals
 		var endLastRun = 0; // End of last run, for further compressing short/relative runs
 		var meaningfulData = false; // Used for MTU limiting, always need at least one meaningful
 		// operation or we won't get anywhere

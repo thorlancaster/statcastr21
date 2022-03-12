@@ -1,0 +1,22 @@
+Today is March 12, 2022. I just finished a bomb-ass session of Saturday morning BJJ and am about to go to quite possibly
+the biggest game in history. The Froid-Lake Redhawks have made it to state and are playing Manhattan Christian, vying
+for their first state title since 1975. (Too bad it's not 1969).
+
+Statcastr3 is currently working as described below.
+Everything is fully MVC. The Model starts with the Synchronizr. To make any changes, bytecode is pushed to the
+Synchronizr and then a series of callbacks cause the changes to trickle up. Synchronizr's callback updates the
+GameModel, which updates the currently selected View on the screen. For the Viewer side, the controller is the
+Synchronizr itself, interfacing with the LSD server over a WebSocket connection.
+
+To change events, the App (ViewerApp/AdminApp) changes the event for the synchronizr, reloads the synchronizr, and
+updates the Model from it. The event listing table is non-realtime, since the server must be queried to get this info.
+Realtime event tables is an upcoming feature I would like to implement soon.
+
+The Admin app (AdminView.js) handles everything related to admin. Touch events are parsed, values determined, and
+byteccode modified. The application then updates as described in the first paragraph.
+
+The most recent thing I did was get a rudimentary plugin system operating. The StatcastrGenericApp has a function
+that is called from the Synchronizr Update Callback and calls plugins. Right now the SpiritSquad.js plugin handles
+displaying scoring runs, a feature I have been wanting for quite a while.
+
+I wish the Redhawks the best of luck as they go against the recruiting powerhouse of Manhattan Christian.

@@ -19,7 +19,7 @@ class TouchManager {
 
 	addGestureListener(f) {
 		var t = this;
-		if (!t.gListeners.includes(f)) // TODO if statement had trailing semicolon and always returned true
+		if (!t.gListeners.includes(f))
 			t.gListeners.push(f);
 	}
 
@@ -114,7 +114,7 @@ class TouchManager {
 			t.log("TouchCount- " + touchCount);
 			// var timeSinceFirst = 0;
 			// var timeSinceFirst = t.allTouches[touch.identifier].tTime - t.firstTouchTime;
-			// TODO check if touchEnd was from fingers getting too close together
+			// NOTE: Maybe check if touchEnd was from fingers getting too close together
 			if (timeSinceFirst > t.MIN_TAP_TIME) {
 				t.log("NumTaps++ " + t.numTaps + " -> " + (t.numTaps + 1));
 				t.numTaps++;
@@ -125,7 +125,8 @@ class TouchManager {
 			if (touchCount === 0 && t.allTouches.length !== 0) {
 				var fromEnd = t._dist < t.MAX_EDGE_DIST;
 				t._dist = null;
-				if (e.uCanceledBy == null) { // Only parse gesture if last TouchEvent wasn't canceled
+				var cancel = e.uCanceledBy;
+				if (cancel == null) { // Only parse gesture if last TouchEvent wasn't canceled
 					var dx = [], dy = []; // Arrays to keep track of how much each point moved
 					var dxSum = 0, dySum = 0;
 					for (var x = 0; x < t.allTouches.length; x++) {

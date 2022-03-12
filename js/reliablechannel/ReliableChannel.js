@@ -1,4 +1,9 @@
 class ReliableChannel{
+	static STATUS_INIT = 0;
+	static STATUS_CONNECTING = 1;
+	static STATUS_CONNECTED = 2;
+	static STATUS_LOST = 3;
+
 	constructor() {
 		var t = this;
 		// When the channel is first created, the status is first created

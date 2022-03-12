@@ -48,7 +48,7 @@ class TestSynchronizrTXRX extends UnitTest{
 			tx.setData(2, 0, this.str2arr("fbgame"), tx.MODE_APPEND);
 			tx.setData(2, 0, this.str2arr("2.0.0"), tx.MODE_APPEND);
 
-			tx.sendLocal();
+			tx.updateLocal();
 			tx.clearBowl();
 			var send = tx.sendRemote();
 			// Simple test
@@ -117,6 +117,12 @@ class TestSynchronizrTXRX extends UnitTest{
 
 			foo = tx.sendRemote(0);
 			rx.applyOpcodes(foo);
+
+			// Test serialization
+			var bc = rx.serialize();
+			console.log("Serialization BC", bc);
+			rx.reset();
+			rx.deserialize(bc);
 
 			t.assertEquals(t.arr2Str(rx._data[1][0]), "Play1");
 			t.assertEquals(t.arr2Str(rx._data[1][1]), "Play22");
